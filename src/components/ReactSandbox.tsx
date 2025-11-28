@@ -136,9 +136,6 @@ export function ReactSandbox() {
           if (isJSXOrTSX) {
             const result = transform(file.content, {
               presets: [['react', { runtime: 'classic' }]],
-              plugins: [
-                ['transform-modules-commonjs', { strictMode: false }]
-              ],
               filename: file.name
             });
             compiledFiles[file.name] = result.code || '';
@@ -173,39 +170,10 @@ export function ReactSandbox() {
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const moduleDefinitions = Object.entries(compiledFiles)
+    const moduleScripts = Object.entries(compiledFiles)
       .map(([name, code]) => {
-        const moduleName = name.replace(/\.(jsx|tsx|js|ts)$/, '');
-        return `
-          moduleFactories['${moduleName}'] = moduleFactories['./${name}'] = function() {
-            if (moduleCache['${moduleName}']) return moduleCache['${moduleName}'];
-
-            const exports = {};
-            const module = { exports };
-
-            function require(path) {
-              if (path === 'react') return React;
-              if (path === 'react-dom') return ReactDOM;
-              if (path.startsWith('./')) {
-                const modName = path.replace('./', '').replace(/\.(jsx|tsx|js|ts)$/, '');
-                if (moduleFactories[modName]) {
-                  return moduleFactories[modName]();
-                }
-                if (moduleFactories[path]) {
-                  return moduleFactories[path]();
-                }
-                throw new Error('Module not found: ' + path);
-              }
-              throw new Error('Module not found: ' + path);
-            }
-
-            ${code}
-
-            const result = module.exports.default || module.exports;
-            moduleCache['${moduleName}'] = result;
-            return result;
-          };
-        `;
+        const moduleName = `./${name}`;
+        return `<script type="module" data-module="${moduleName}">\n${code}\n</script>`;
       })
       .join('\n');
 
@@ -228,27 +196,19 @@ export function ReactSandbox() {
 </head>
 <body>
   <div id="root"></div>
+  ${moduleScripts}
   <script type="module">
     import React from 'react';
     import ReactDOM from 'react-dom/client';
 
-    window.React = React;
-    window.ReactDOM = ReactDOM;
-
-    const moduleFactories = {};
-    const moduleCache = {};
-
-    ${moduleDefinitions}
-
     try {
-      const AppFactory = moduleFactories['App'] || moduleFactories['./App.jsx'] || moduleFactories['./App.tsx'];
-      if (!AppFactory) {
+      const appModule = document.querySelector('script[data-module="./App.jsx"], script[data-module="./App.tsx"]');
+      if (!appModule) {
         throw new Error('App component not found');
       }
 
-      const App = AppFactory();
       const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
+      root.render(React.createElement(window.App));
     } catch (err) {
       document.getElementById('root').innerHTML =
         '<div style="padding: 20px; color: red; font-family: monospace;">' +
