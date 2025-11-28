@@ -240,12 +240,16 @@ export function ReactSandbox() {
     Object.entries(compiledFiles).forEach(([name, code]) => {
       if (name === 'index.html') return;
 
-      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '").replace(/from\s+['"]\.\.\//g, "from '");
+      const transformedCode = code
+        .replace(/from\s+['"]\.\//g, "from './")
+        .replace(/from\s+['"]\.\.\//g, "from '../");
 
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
       dataUrls[name] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
       dataUrls[nameWithoutExt] = dataUrl;
+      dataUrls['./' + name] = dataUrl;
+      dataUrls['./' + nameWithoutExt] = dataUrl;
     });
 
     const htmlFile = files().find(f => f.name === 'index.html');
