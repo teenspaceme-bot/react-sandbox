@@ -238,22 +238,47 @@ export function ReactSandbox() {
       dataUrls[nameWithoutExt] = dataUrl;
     });
 
-    const customImportMap = {
-      imports: {
-        ...importMap.imports,
-        ...dataUrls
-      }
-    };
-
     // Find the index.html file in the files array
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
 
-    // Replace the import map in the template with our custom one
-    html = html.replace(
-      /<script type="importmap">[\s\S]*?<\/script>/,
-      `<script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>`
-    );
+    // Extract existing import map from the HTML file if present
+    const importMapMatch = html.match(/<script type="importmap">\s*([\s\S]*?)\s*<\/script>/);
+    let existingImports = {};
+
+    if (importMapMatch && importMapMatch[1]) {
+      try {
+        const parsed = JSON.parse(importMapMatch[1]);
+        existingImports = parsed.imports || {};
+      } catch (e) {
+        // If parsing fails, use default importMap
+        existingImports = importMap.imports;
+      }
+    } else {
+      // If no import map in HTML, use default importMap
+      existingImports = importMap.imports;
+    }
+
+    const customImportMap = {
+      imports: {
+        ...existingImports,
+        ...dataUrls
+      }
+    };
+
+    // Replace or insert the import map in the HTML
+    if (importMapMatch) {
+      html = html.replace(
+        /<script type="importmap">[\s\S]*?<\/script>/,
+        `<script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>`
+      );
+    } else {
+      // If no import map exists, insert it in the head
+      html = html.replace(
+        /<\/head>/,
+        `  <script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>\n</head>`
+      );
+    }
 
     return html;
   };
