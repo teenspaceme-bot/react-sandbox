@@ -1,11 +1,12 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import { transform } from '@babel/standalone';
-import type { FileType, ImportMapType, HTMLTemplateType } from '../types/sandbox';
+import type { FileType, ImportMapType } from '../types/sandbox';
 import './ReactSandbox.css';
 
-const defaultHTMLTemplate: HTMLTemplateType = {
-  name: 'index.html',
-  content: `<!DOCTYPE html>
+const defaultFiles: FileType[] = [
+  {
+    name: 'index.html',
+    content: `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -48,10 +49,9 @@ const defaultHTMLTemplate: HTMLTemplateType = {
     }
   </script>
 </body>
-</html>`
-};
-
-const defaultFiles: FileType[] = [
+</html>`,
+    language: 'html'
+  },
   {
     name: 'App.jsx',
     content: `import React, { useState } from 'react';
@@ -245,8 +245,9 @@ export function ReactSandbox() {
       }
     };
 
-    // Use the default HTML template and inject the custom import map
-    let html = defaultHTMLTemplate.content;
+    // Find the index.html file in the files array
+    const htmlFile = files().find(f => f.name === 'index.html');
+    let html = htmlFile?.content || '';
 
     // Replace the import map in the template with our custom one
     html = html.replace(
