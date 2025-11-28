@@ -36,7 +36,7 @@ const defaultFiles: FileType[] = [
   <script type="module">
     import React from 'react';
     import ReactDOM from 'react-dom/client';
-    import App from 'App.jsx';
+    import App from 'App';
 
     try {
       const root = ReactDOM.createRoot(document.getElementById('root'));
