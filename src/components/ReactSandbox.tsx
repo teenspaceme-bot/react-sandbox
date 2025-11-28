@@ -172,11 +172,55 @@ export function ReactSandbox() {
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
     const moduleRegistry: Record<string, string> = {};
 
+    // Pre-process all modules to remove imports and handle exports
     Object.entries(compiledFiles).forEach(([name, code]) => {
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
-      moduleRegistry[nameWithoutExt] = code;
-      moduleRegistry[`./${name}`] = code;
-      moduleRegistry[`./${nameWithoutExt}`] = code;
+
+      // Extract exports
+      const exportNames = new Set<string>();
+      let hasDefaultExport = false;
+
+      code.replace(/export\s+default\s+/g, () => { hasDefaultExport = true; return ''; });
+      code.replace(/export\s+(?:function|class|const|let|var)\s+(\w+)/g, (_, name) => {
+        exportNames.add(name);
+        return '';
+      });
+      code.replace(/export\s+{([^}]+)}/g, (_, names: string) => {
+        names.split(',').forEach((n: string) => exportNames.add(n.trim()));
+        return '';
+      });
+
+      // Extract local imports
+      const localImports: string[] = [];
+      code.replace(/import\s+({[^}]+}|\w+)\s+from\s+['"](\.\/[^'"]+)['"]/g, (_, imports, modulePath) => {
+        localImports.push(`const ${imports} = await executeModule('${modulePath}');`);
+        return '';
+      });
+
+      // Transform the code
+      let transformedCode = code
+        // Remove all import statements
+        .replace(/import\s+[^;]+;?\n?/g, '')
+        // Remove export keywords
+        .replace(/export\s+default\s+/g, 'const __default = ')
+        .replace(/export\s+(?:function|class|const|let|var)\s+/g, '')
+        .replace(/export\s+{([^}]+)}/g, '');
+
+      // Build the final code
+      const exportList = Array.from(exportNames).join(', ');
+      const returnStatement = hasDefaultExport
+        ? `{ default: __default${exportNames.size > 0 ? ', ' + exportList : ''} }`
+        : `{ ${exportList} }`;
+
+      const finalCode = `
+${localImports.join('\n')}
+${transformedCode}
+return ${returnStatement};
+      `.trim();
+
+      moduleRegistry[nameWithoutExt] = finalCode;
+      moduleRegistry[`./${name}`] = finalCode;
+      moduleRegistry[`./${nameWithoutExt}`] = finalCode;
     });
 
     const inlineModules = Object.entries(moduleRegistry)
@@ -232,43 +276,9 @@ export function ReactSandbox() {
         const ReactLib = React.default || React;
         const ReactDOMLib = ReactDOMModule.default || ReactDOMModule;
 
-        // Extract all export names from the code
-        const exportNames = new Set();
-        let hasDefaultExport = false;
-
-        code.replace(/export\\s+default\\s+/g, () => { hasDefaultExport = true; return ''; });
-        code.replace(/export\\s+(?:function|class|const|let|var)\\s+(\\w+)/g, (_, name) => {
-          exportNames.add(name);
-          return '';
-        });
-        code.replace(/export\\s+{([^}]+)}/g, (_, names) => {
-          names.split(',').forEach(name => exportNames.add(name.trim()));
-          return '';
-        });
-
-        let transformedCode = code
-          .replace(/import\\s+React\\s+from\\s+['"]react['"]/g, '')
-          .replace(/import\\s+{([^}]+)}\\s+from\\s+['"]react['"]/g, '')
-          .replace(/import\\s+({[^}]+}|\\*\\s+as\\s+\\w+|\\w+)\\s+from\\s+['"]([^'"]+)['"]/g,
-            (match, imports, modulePath) => {
-              if (modulePath === 'react' || modulePath === 'react-dom' || modulePath === 'react-dom/client') {
-                return '';
-              }
-              return \`const \${imports} = await executeModule('\${modulePath}');\`;
-            })
-          .replace(/export\\s+default\\s+/g, 'const __default = ')
-          .replace(/export\\s+(?:function|class|const|let|var)\\s+/g, '')
-          .replace(/export\\s+{([^}]+)}/g, '');
-
-        const exportList = Array.from(exportNames).join(', ');
-        const returnStatement = hasDefaultExport
-          ? \`{ default: __default\${exportNames.size > 0 ? ', ' + exportList : ''} }\`
-          : \`{ \${exportList} }\`;
-
         const moduleFunction = new Function('executeModule', 'React', 'ReactDOM', \`
           return (async () => {
-            \${transformedCode}
-            return \${returnStatement};
+            \${code}
           })();
         \`);
 
