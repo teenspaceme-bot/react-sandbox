@@ -221,7 +221,8 @@ export function ReactSandbox() {
     const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      // Replace relative imports with absolute module names
+      if (name === 'index.html') return;
+
       const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
 
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
@@ -236,6 +237,12 @@ export function ReactSandbox() {
         ...dataUrls
       }
     };
+
+    const htmlFile = files().find(f => f.name === 'index.html');
+    if (htmlFile) {
+      return htmlFile.content
+        .replace(/\$\{JSON\.stringify\(customImportMap,\s*null,\s*2\)\}/g, JSON.stringify(customImportMap, null, 2));
+    }
 
     return `<!DOCTYPE html>
 <html>
