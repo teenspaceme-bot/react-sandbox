@@ -279,21 +279,21 @@ export function ReactSandbox() {
       htmlContent = htmlContent.replace(
         /<script\s+type=["']module["']\s+src=["']([^"']+)["']><\/script>/gi,
         (match, src) => {
-          const cleanPath = src.replace(/^\//, '');
+          const cleanPath = src.replace(/^\.?\//, '');
 
           if (dataUrls[cleanPath]) {
-            return `<script type="module" src="${dataUrls[cleanPath]}"></script>`;
+            return `<script type="module">\nimport("${dataUrls[cleanPath]}");\n</script>`;
           }
 
           const withoutExt = cleanPath.replace(/\.(jsx|tsx|js|ts)$/, '');
           if (dataUrls[withoutExt]) {
-            return `<script type="module" src="${dataUrls[withoutExt]}"></script>`;
+            return `<script type="module">\nimport("${dataUrls[withoutExt]}");\n</script>`;
           }
 
           for (const [fileName, url] of Object.entries(dataUrls)) {
             const fileWithoutExt = fileName.replace(/\.(jsx|tsx|js|ts)$/, '');
             if (fileWithoutExt === withoutExt || fileName === cleanPath) {
-              return `<script type="module" src="${url}"></script>`;
+              return `<script type="module">\nimport("${url}");\n</script>`;
             }
           }
 
