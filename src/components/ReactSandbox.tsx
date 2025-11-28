@@ -43,23 +43,22 @@ const defaultFiles: FileType[] = [
     language: 'html'
   },
   {
-    name: 'index.tsx',
+    name: 'index.jsx',
     content: `import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 
-try {
-  const root = ReactDOM.createRoot(document.getElementById('root')!);
-  root.render(<App />);
-} catch (err: any) {
-  const rootEl = document.getElementById('root');
-  if (rootEl) {
-    rootEl.innerHTML =
-      '<div style="padding: 20px; color: red; font-family: monospace;">' +
-      '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
-  }
-  console.error(err);
-}`,
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error("Could not find root element to mount to");
+}
+
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);`,
     language: 'tsx'
   },
   {
