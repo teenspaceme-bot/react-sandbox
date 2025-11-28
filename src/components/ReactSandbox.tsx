@@ -202,7 +202,15 @@ export function ReactSandbox() {
 <head>
   <meta charset="UTF-8">
   <script type="importmap">
-    ${JSON.stringify(customImportMap, null, 2)}
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/": "https://esm.sh/react@18.2.0/",
+        "lucide-react": "https://esm.sh/lucide-react@0.330.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+      }
+    }
   </script>
   <style>
     body {
