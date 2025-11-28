@@ -231,18 +231,56 @@ export function ReactSandbox() {
       dataUrls[nameWithoutExt] = dataUrl;
     });
 
+    const htmlFile = files().find(f => f.name === 'index.html');
+    if (htmlFile) {
+      let htmlContent = htmlFile.content;
+
+      const importMapMatch = htmlContent.match(/<script\s+type=["']importmap["']>\s*(\{[\s\S]*?\})\s*<\/script>/i);
+      let userImportMap: any = { imports: {} };
+
+      if (importMapMatch) {
+        try {
+          userImportMap = JSON.parse(importMapMatch[1]);
+        } catch (e) {
+          console.error('Failed to parse user import map:', e);
+        }
+      }
+
+      const mergedImportMap = {
+        imports: {
+          ...importMap.imports,
+          ...userImportMap.imports,
+          ...dataUrls
+        }
+      };
+
+      htmlContent = htmlContent.replace(
+        /<script\s+type=["']importmap["']>\s*\{[\s\S]*?\}\s*<\/script>/i,
+        `<script type="importmap">\n${JSON.stringify(mergedImportMap, null, 2)}\n</script>`
+      );
+
+      htmlContent = htmlContent.replace(
+        /<script\s+type=["']module["']\s+src=["']([^"']+)["']><\/script>/gi,
+        (match, src) => {
+          const cleanPath = src.replace(/^\//, '');
+          const fileKey = dataUrls[cleanPath] || dataUrls[cleanPath.replace(/\.(jsx|tsx|js|ts)$/, '')];
+
+          if (fileKey) {
+            return `<script type="module" src="${fileKey}"></script>`;
+          }
+          return match;
+        }
+      );
+
+      return htmlContent;
+    }
+
     const customImportMap = {
       imports: {
         ...importMap.imports,
         ...dataUrls
       }
     };
-
-    const htmlFile = files().find(f => f.name === 'index.html');
-    if (htmlFile) {
-      return htmlFile.content
-        .replace(/\$\{JSON\.stringify\(customImportMap,\s*null,\s*2\)\}/g, JSON.stringify(customImportMap, null, 2));
-    }
 
     return `<!DOCTYPE html>
 <html>
