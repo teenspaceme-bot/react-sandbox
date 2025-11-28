@@ -181,10 +181,13 @@ export function ReactSandbox() {
     const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
-      dataUrls[`./${name}`] = dataUrl;
+      // Replace relative imports with absolute module names
+      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
+
+      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
+      dataUrls[name] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
-      dataUrls[`./${nameWithoutExt}`] = dataUrl;
+      dataUrls[nameWithoutExt] = dataUrl;
     });
 
     const customImportMap = {
@@ -216,7 +219,7 @@ export function ReactSandbox() {
   <script type="module">
     import React from 'react';
     import ReactDOM from 'react-dom/client';
-    import App from './App.jsx';
+    import App from 'App.jsx';
 
     try {
       const root = ReactDOM.createRoot(document.getElementById('root'));
