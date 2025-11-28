@@ -5,6 +5,46 @@ import './ReactSandbox.css';
 
 const defaultFiles: FileType[] = [
   {
+    name: 'index.html',
+    content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script type="importmap">
+    \${JSON.stringify(customImportMap, null, 2)}
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import App from 'App.jsx';
+
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    } catch (err) {
+      document.getElementById('root').innerHTML =
+        '<div style="padding: 20px; color: red; font-family: monospace;">' +
+        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+      console.error(err);
+    }
+  </script>
+</body>
+</html>`,
+    language: 'html'
+  },
+  {
     name: 'App.jsx',
     content: `import React, { useState } from 'react';
 import { Button } from './Button';
