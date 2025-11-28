@@ -7,40 +7,38 @@ const defaultFiles: FileType[] = [
   {
     name: 'index.html',
     content: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React Live Sandbox</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      code, pre, textarea {
+        font-family: 'JetBrains Mono', monospace;
+      }
+    </style>
   <script type="importmap">
-    \${JSON.stringify(customImportMap, null, 2)}
-  </script>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    #root {
-      min-height: 100vh;
-    }
-  </style>
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.2.0",
+    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+    "react/": "https://esm.sh/react@18.2.0/",
+    "@google/genai": "https://esm.sh/@google/genai@0.1.1",
+    "lucide-react": "https://esm.sh/lucide-react@0.330.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+  }
+}
+</script>
 </head>
-<body>
-  <div id="root"></div>
-  <script type="module">
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
-    import App from 'App.jsx';
-
-    try {
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
-    } catch (err) {
-      document.getElementById('root').innerHTML =
-        '<div style="padding: 20px; color: red; font-family: monospace;">' +
-        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
-      console.error(err);
-    }
-  </script>
-</body>
+  <body class="bg-slate-900 text-slate-100 h-screen overflow-hidden">
+    <div id="root" class="h-full w-full"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>`,
     language: 'html'
   },
