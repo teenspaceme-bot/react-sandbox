@@ -170,19 +170,28 @@ export function ReactSandbox() {
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const moduleScripts = Object.entries(compiledFiles)
-      .map(([name, code]) => {
-        const moduleName = `./${name}`;
-        return `<script type="module" data-module="${moduleName}">\n${code}\n</script>`;
-      })
-      .join('\n');
+    const blobUrls: Record<string, string> = {};
+
+    Object.entries(compiledFiles).forEach(([name, code]) => {
+      const blob = new Blob([code], { type: 'text/javascript' });
+      blobUrls[`./${name}`] = URL.createObjectURL(blob);
+      const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
+      blobUrls[`./${nameWithoutExt}`] = blobUrls[`./${name}`];
+    });
+
+    const customImportMap = {
+      imports: {
+        ...importMap.imports,
+        ...blobUrls
+      }
+    };
 
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <script type="importmap">
-    ${JSON.stringify(importMap, null, 2)}
+    ${JSON.stringify(customImportMap, null, 2)}
   </script>
   <style>
     body {
@@ -196,19 +205,14 @@ export function ReactSandbox() {
 </head>
 <body>
   <div id="root"></div>
-  ${moduleScripts}
   <script type="module">
     import React from 'react';
     import ReactDOM from 'react-dom/client';
+    import App from './App.jsx';
 
     try {
-      const appModule = document.querySelector('script[data-module="./App.jsx"], script[data-module="./App.tsx"]');
-      if (!appModule) {
-        throw new Error('App component not found');
-      }
-
       const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(window.App));
+      root.render(React.createElement(App));
     } catch (err) {
       document.getElementById('root').innerHTML =
         '<div style="padding: 20px; color: red; font-family: monospace;">' +
