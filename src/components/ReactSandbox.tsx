@@ -227,29 +227,52 @@ export function ReactSandbox() {
       }
 
       const promise = (async () => {
-        const transformedCode = code
+        const React = await import('${importMap.imports.react}');
+        const ReactDOMModule = await import('${importMap.imports['react-dom/client']}');
+        const ReactLib = React.default || React;
+        const ReactDOMLib = ReactDOMModule.default || ReactDOMModule;
+
+        // Extract all export names from the code
+        const exportNames = new Set();
+        let hasDefaultExport = false;
+
+        code.replace(/export\\s+default\\s+/g, () => { hasDefaultExport = true; return ''; });
+        code.replace(/export\\s+(?:function|class|const|let|var)\\s+(\\w+)/g, (_, name) => {
+          exportNames.add(name);
+          return '';
+        });
+        code.replace(/export\\s+{([^}]+)}/g, (_, names) => {
+          names.split(',').forEach(name => exportNames.add(name.trim()));
+          return '';
+        });
+
+        let transformedCode = code
+          .replace(/import\\s+React\\s+from\\s+['"]react['"]/g, '')
+          .replace(/import\\s+{([^}]+)}\\s+from\\s+['"]react['"]/g, '')
           .replace(/import\\s+({[^}]+}|\\*\\s+as\\s+\\w+|\\w+)\\s+from\\s+['"]([^'"]+)['"]/g,
             (match, imports, modulePath) => {
               if (modulePath === 'react' || modulePath === 'react-dom' || modulePath === 'react-dom/client') {
-                return match;
+                return '';
               }
               return \`const \${imports} = await executeModule('\${modulePath}');\`;
             })
-          .replace(/export\\s+default\\s+/, 'const __default = ')
-          .replace(/export\\s+(?:function|class|const|let|var)\\s+(\\w+)/g, 'const $1 = $1; /*export*/')
-          .replace(/export\\s+{([^}]+)}/g, '/*export { $1 }*/');
+          .replace(/export\\s+default\\s+/g, 'const __default = ')
+          .replace(/export\\s+(?:function|class|const|let|var)\\s+/g, '')
+          .replace(/export\\s+{([^}]+)}/g, '');
+
+        const exportList = Array.from(exportNames).join(', ');
+        const returnStatement = hasDefaultExport
+          ? \`{ default: __default\${exportNames.size > 0 ? ', ' + exportList : ''} }\`
+          : \`{ \${exportList} }\`;
 
         const moduleFunction = new Function('executeModule', 'React', 'ReactDOM', \`
           return (async () => {
             \${transformedCode}
-            return { default: typeof __default !== 'undefined' ? __default : undefined, Button, Card };
+            return \${returnStatement};
           })();
         \`);
 
-        const React = await import('${importMap.imports.react}');
-        const ReactDOMModule = await import('${importMap.imports['react-dom/client']}');
-
-        const exports = await moduleFunction(executeModule, React.default || React, ReactDOMModule.default || ReactDOMModule);
+        const exports = await moduleFunction(executeModule, ReactLib, ReactDOMLib);
         moduleCache.set(path, exports);
         return exports;
       })();
