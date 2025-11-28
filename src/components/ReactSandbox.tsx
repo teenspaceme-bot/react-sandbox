@@ -170,19 +170,19 @@ export function ReactSandbox() {
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const blobUrls: Record<string, string> = {};
+    const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      const blob = new Blob([code], { type: 'text/javascript' });
-      blobUrls[`./${name}`] = URL.createObjectURL(blob);
+      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
+      dataUrls[`./${name}`] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
-      blobUrls[`./${nameWithoutExt}`] = blobUrls[`./${name}`];
+      dataUrls[`./${nameWithoutExt}`] = dataUrl;
     });
 
     const customImportMap = {
       imports: {
         ...importMap.imports,
-        ...blobUrls
+        ...dataUrls
       }
     };
 
