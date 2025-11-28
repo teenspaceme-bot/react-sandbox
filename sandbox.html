@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Sandbox</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client"
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import App from 'App.jsx';
+
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    } catch (err) {
+      document.getElementById('root').innerHTML =
+        '<div style="padding: 20px; color: red; font-family: monospace;">' +
+        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+      console.error(err);
+    }
+  </script>
+</body>
+</html>
