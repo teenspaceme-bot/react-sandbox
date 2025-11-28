@@ -1,7 +1,55 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
 import { transform } from '@babel/standalone';
-import type { FileType, ImportMapType } from '../types/sandbox';
+import type { FileType, ImportMapType, HTMLTemplateType } from '../types/sandbox';
 import './ReactSandbox.css';
+
+const defaultHTMLTemplate: HTMLTemplateType = {
+  name: 'index.html',
+  content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "react/": "https://esm.sh/react@18.2.0/",
+        "lucide-react": "https://esm.sh/lucide-react@0.330.0",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import App from 'App.jsx';
+
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    } catch (err) {
+      document.getElementById('root').innerHTML =
+        '<div style="padding: 20px; color: red; font-family: monospace;">' +
+        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+      console.error(err);
+    }
+  </script>
+</body>
+</html>`
+};
 
 const defaultFiles: FileType[] = [
   {
@@ -197,50 +245,16 @@ export function ReactSandbox() {
       }
     };
 
-    return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "react/": "https://esm.sh/react@18.2.0/",
-        "lucide-react": "https://esm.sh/lucide-react@0.330.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
-      }
-    }
-  </script>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    #root {
-      min-height: 100vh;
-    }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module">
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
-    import App from 'App.jsx';
+    // Use the default HTML template and inject the custom import map
+    let html = defaultHTMLTemplate.content;
 
-    try {
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
-    } catch (err) {
-      document.getElementById('root').innerHTML =
-        '<div style="padding: 20px; color: red; font-family: monospace;">' +
-        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
-      console.error(err);
-    }
-  </script>
-</body>
-</html>`;
+    // Replace the import map in the template with our custom one
+    html = html.replace(
+      /<script type="importmap">[\s\S]*?<\/script>/,
+      `<script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>`
+    );
+
+    return html;
   };
 
   createEffect(() => {

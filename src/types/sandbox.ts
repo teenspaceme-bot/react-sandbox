@@ -7,3 +7,8 @@ export interface FileType {
 export interface ImportMapType {
   imports: Record<string, string>;
 }
+
+export interface HTMLTemplateType {
+  name: string;
+  content: string;
+}
