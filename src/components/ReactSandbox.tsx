@@ -37,7 +37,7 @@ const defaultFiles: FileType[] = [
 </head>
   <body class="bg-slate-900 text-slate-100 h-screen overflow-hidden">
     <div id="root" class="h-full w-full"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/index.jsx"></script>
   </body>
 </html>`,
     language: 'html'
