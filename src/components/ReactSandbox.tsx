@@ -5,63 +5,6 @@ import './ReactSandbox.css';
 
 const defaultFiles: FileType[] = [
   {
-    name: 'index.html',
-    content: `<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>React Live Sandbox</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body {
-        font-family: 'Inter', sans-serif;
-      }
-      code, pre, textarea {
-        font-family: 'JetBrains Mono', monospace;
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react/": "https://esm.sh/react@18.2.0/",
-    "@google/genai": "https://esm.sh/@google/genai@0.1.1",
-    "lucide-react": "https://esm.sh/lucide-react@0.330.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
-  }
-}
-</script>
-</head>
-  <body class="bg-slate-900 text-slate-100 h-screen overflow-hidden">
-    <div id="root" class="h-full w-full"></div>
-    <script type="module" src="/index.jsx"></script>
-  </body>
-</html>`,
-    language: 'html'
-  },
-  {
-    name: 'index.jsx',
-    content: `import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);`,
-    language: 'jsx'
-  },
-  {
     name: 'App.jsx',
     content: `import React, { useState } from 'react';
 import { Button } from './Button';
@@ -238,83 +181,14 @@ export function ReactSandbox() {
     const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      if (name === 'index.html') return;
-
-      let transformedCode = code;
-
-      // Replace relative imports with bare specifiers
-      Object.keys(compiledFiles).forEach(fileName => {
-        if (fileName === 'index.html') return;
-        const nameWithoutExt = fileName.replace(/\.(jsx|tsx|js|ts)$/, '');
-
-        // Replace './filename' or './filename.ext' with 'filename'
-        transformedCode = transformedCode
-          .replace(new RegExp(`from\\s+['"]\\.\\/` + fileName + `['"]`, 'g'), `from '${nameWithoutExt}'`)
-          .replace(new RegExp(`from\\s+['"]\\.\\/` + nameWithoutExt + `['"]`, 'g'), `from '${nameWithoutExt}'`)
-          .replace(new RegExp(`import\\s+['"]\\.\\/` + fileName + `['"]`, 'g'), `import '${nameWithoutExt}'`)
-          .replace(new RegExp(`import\\s+['"]\\.\\/` + nameWithoutExt + `['"]`, 'g'), `import '${nameWithoutExt}'`);
-      });
+      // Replace relative imports with absolute module names
+      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
 
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
+      dataUrls[name] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
       dataUrls[nameWithoutExt] = dataUrl;
     });
-
-    const htmlFile = files().find(f => f.name === 'index.html');
-    if (htmlFile) {
-      let htmlContent = htmlFile.content;
-
-      const importMapMatch = htmlContent.match(/<script\s+type=["']importmap["']>\s*(\{[\s\S]*?\})\s*<\/script>/i);
-      let userImportMap: any = { imports: {} };
-
-      if (importMapMatch) {
-        try {
-          userImportMap = JSON.parse(importMapMatch[1]);
-        } catch (e) {
-          console.error('Failed to parse user import map:', e);
-        }
-      }
-
-      const mergedImportMap = {
-        imports: {
-          ...importMap.imports,
-          ...userImportMap.imports,
-          ...dataUrls
-        }
-      };
-
-      htmlContent = htmlContent.replace(
-        /<script\s+type=["']importmap["']>\s*\{[\s\S]*?\}\s*<\/script>/i,
-        `<script type="importmap">\n${JSON.stringify(mergedImportMap, null, 2)}\n</script>`
-      );
-
-      htmlContent = htmlContent.replace(
-        /<script\s+type=["']module["']\s+src=["']([^"']+)["']><\/script>/gi,
-        (match, src) => {
-          const cleanPath = src.replace(/^\.?\//, '');
-          const withoutExt = cleanPath.replace(/\.(jsx|tsx|js|ts)$/, '');
-
-          if (dataUrls[withoutExt]) {
-            return `<script type="module">\nimport("${withoutExt}");\n</script>`;
-          }
-
-          if (dataUrls[cleanPath]) {
-            return `<script type="module">\nimport("${cleanPath}");\n</script>`;
-          }
-
-          for (const [fileName, url] of Object.entries(dataUrls)) {
-            const fileWithoutExt = fileName.replace(/\.(jsx|tsx|js|ts)$/, '');
-            if (fileWithoutExt === withoutExt || fileName === cleanPath) {
-              return `<script type="module">\nimport("${url}");\n</script>`;
-            }
-          }
-
-          return match;
-        }
-      );
-
-      return htmlContent;
-    }
 
     const customImportMap = {
       imports: {
