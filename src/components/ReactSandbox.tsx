@@ -240,16 +240,24 @@ export function ReactSandbox() {
     Object.entries(compiledFiles).forEach(([name, code]) => {
       if (name === 'index.html') return;
 
-      const transformedCode = code
-        .replace(/from\s+['"]\.\//g, "from './")
-        .replace(/from\s+['"]\.\.\//g, "from '../");
+      let transformedCode = code;
+
+      // Replace relative imports with bare specifiers
+      Object.keys(compiledFiles).forEach(fileName => {
+        if (fileName === 'index.html') return;
+        const nameWithoutExt = fileName.replace(/\.(jsx|tsx|js|ts)$/, '');
+
+        // Replace './filename' or './filename.ext' with 'filename'
+        transformedCode = transformedCode
+          .replace(new RegExp(`from\\s+['"]\\.\\/` + fileName + `['"]`, 'g'), `from '${nameWithoutExt}'`)
+          .replace(new RegExp(`from\\s+['"]\\.\\/` + nameWithoutExt + `['"]`, 'g'), `from '${nameWithoutExt}'`)
+          .replace(new RegExp(`import\\s+['"]\\.\\/` + fileName + `['"]`, 'g'), `import '${nameWithoutExt}'`)
+          .replace(new RegExp(`import\\s+['"]\\.\\/` + nameWithoutExt + `['"]`, 'g'), `import '${nameWithoutExt}'`);
+      });
 
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
-      dataUrls[name] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
       dataUrls[nameWithoutExt] = dataUrl;
-      dataUrls['./' + name] = dataUrl;
-      dataUrls['./' + nameWithoutExt] = dataUrl;
     });
 
     const htmlFile = files().find(f => f.name === 'index.html');
