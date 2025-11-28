@@ -43,6 +43,26 @@ const defaultFiles: FileType[] = [
     language: 'html'
   },
   {
+    name: 'index.tsx',
+    content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+
+try {
+  const root = ReactDOM.createRoot(document.getElementById('root')!);
+  root.render(<App />);
+} catch (err: any) {
+  const rootEl = document.getElementById('root');
+  if (rootEl) {
+    rootEl.innerHTML =
+      '<div style="padding: 20px; color: red; font-family: monospace;">' +
+      '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+  }
+  console.error(err);
+}`,
+    language: 'tsx'
+  },
+  {
     name: 'App.jsx',
     content: `import React, { useState } from 'react';
 import { Button } from './Button';
@@ -221,7 +241,7 @@ export function ReactSandbox() {
     Object.entries(compiledFiles).forEach(([name, code]) => {
       if (name === 'index.html') return;
 
-      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
+      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '").replace(/from\s+['"]\.\.\//g, "from '");
 
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
       dataUrls[name] = dataUrl;
@@ -261,11 +281,23 @@ export function ReactSandbox() {
         /<script\s+type=["']module["']\s+src=["']([^"']+)["']><\/script>/gi,
         (match, src) => {
           const cleanPath = src.replace(/^\//, '');
-          const fileKey = dataUrls[cleanPath] || dataUrls[cleanPath.replace(/\.(jsx|tsx|js|ts)$/, '')];
 
-          if (fileKey) {
-            return `<script type="module" src="${fileKey}"></script>`;
+          if (dataUrls[cleanPath]) {
+            return `<script type="module" src="${dataUrls[cleanPath]}"></script>`;
           }
+
+          const withoutExt = cleanPath.replace(/\.(jsx|tsx|js|ts)$/, '');
+          if (dataUrls[withoutExt]) {
+            return `<script type="module" src="${dataUrls[withoutExt]}"></script>`;
+          }
+
+          for (const [fileName, url] of Object.entries(dataUrls)) {
+            const fileWithoutExt = fileName.replace(/\.(jsx|tsx|js|ts)$/, '');
+            if (fileWithoutExt === withoutExt || fileName === cleanPath) {
+              return `<script type="module" src="${url}"></script>`;
+            }
+          }
+
           return match;
         }
       );
