@@ -159,78 +159,48 @@ export function ReactSandbox() {
     if (!compiled) return;
 
     const html = generateHTML(compiled, importMap());
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+
     setIframeKey(prev => prev + 1);
 
     setTimeout(() => {
       const iframe = document.getElementById('preview-iframe') as HTMLIFrameElement;
       if (iframe) {
-        iframe.srcdoc = html;
+        // Revoke old URL if it exists
+        const oldSrc = iframe.src;
+        if (oldSrc && oldSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(oldSrc);
+        }
+        iframe.src = url;
       }
     }, 0);
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const moduleRegistry: Record<string, string> = {};
+    const dataUrls: Record<string, string> = {};
 
-    // Pre-process all modules to remove imports and handle exports
     Object.entries(compiledFiles).forEach(([name, code]) => {
+      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
+      dataUrls[`./${name}`] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
-
-      // Extract exports
-      const exportNames = new Set<string>();
-      let hasDefaultExport = false;
-
-      code.replace(/export\s+default\s+/g, () => { hasDefaultExport = true; return ''; });
-      code.replace(/export\s+(?:function|class|const|let|var)\s+(\w+)/g, (_, name) => {
-        exportNames.add(name);
-        return '';
-      });
-      code.replace(/export\s+{([^}]+)}/g, (_, names: string) => {
-        names.split(',').forEach((n: string) => exportNames.add(n.trim()));
-        return '';
-      });
-
-      // Extract local imports
-      const localImports: string[] = [];
-      code.replace(/import\s+({[^}]+}|\w+)\s+from\s+['"](\.\/[^'"]+)['"]/g, (_, imports, modulePath) => {
-        localImports.push(`const ${imports} = await executeModule('${modulePath}');`);
-        return '';
-      });
-
-      // Transform the code
-      let transformedCode = code
-        // Remove all import statements
-        .replace(/import\s+[^;]+;?\n?/g, '')
-        // Remove export keywords
-        .replace(/export\s+default\s+/g, 'const __default = ')
-        .replace(/export\s+(?:function|class|const|let|var)\s+/g, '')
-        .replace(/export\s+{([^}]+)}/g, '');
-
-      // Build the final code
-      const exportList = Array.from(exportNames).join(', ');
-      const returnStatement = hasDefaultExport
-        ? `{ default: __default${exportNames.size > 0 ? ', ' + exportList : ''} }`
-        : `{ ${exportList} }`;
-
-      const finalCode = `
-${localImports.join('\n')}
-${transformedCode}
-return ${returnStatement};
-      `.trim();
-
-      moduleRegistry[nameWithoutExt] = finalCode;
-      moduleRegistry[`./${name}`] = finalCode;
-      moduleRegistry[`./${nameWithoutExt}`] = finalCode;
+      dataUrls[`./${nameWithoutExt}`] = dataUrl;
     });
 
-    const inlineModules = Object.entries(moduleRegistry)
-      .map(([path, code]) => `'${path}': \`${code.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\``)
-      .join(',\n    ');
+    const customImportMap = {
+      imports: {
+        ...importMap.imports,
+        ...dataUrls
+      }
+    };
 
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <script type="importmap">
+    ${JSON.stringify(customImportMap, null, 2)}
+  </script>
   <style>
     body {
       margin: 0;
@@ -244,73 +214,19 @@ return ${returnStatement};
 <body>
   <div id="root"></div>
   <script type="module">
-    const modules = {
-      ${inlineModules}
-    };
+    import React from 'react';
+    import ReactDOM from 'react-dom/client';
+    import App from './App.jsx';
 
-    const moduleCache = new Map();
-    const pendingModules = new Map();
-
-    async function loadExternalModule(url) {
-      const module = await import(url);
-      return module;
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    } catch (err) {
+      document.getElementById('root').innerHTML =
+        '<div style="padding: 20px; color: red; font-family: monospace;">' +
+        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+      console.error(err);
     }
-
-    async function executeModule(path) {
-      if (moduleCache.has(path)) {
-        return moduleCache.get(path);
-      }
-
-      if (pendingModules.has(path)) {
-        return pendingModules.get(path);
-      }
-
-      const code = modules[path];
-      if (!code) {
-        throw new Error(\`Module not found: \${path}\`);
-      }
-
-      const promise = (async () => {
-        const React = await import('${importMap.imports.react}');
-        const ReactDOMModule = await import('${importMap.imports['react-dom/client']}');
-        const ReactLib = React.default || React;
-        const ReactDOMLib = ReactDOMModule.default || ReactDOMModule;
-
-        const moduleFunction = new Function('executeModule', 'React', 'ReactDOM', \`
-          return (async () => {
-            \${code}
-          })();
-        \`);
-
-        const exports = await moduleFunction(executeModule, ReactLib, ReactDOMLib);
-        moduleCache.set(path, exports);
-        return exports;
-      })();
-
-      pendingModules.set(path, promise);
-      const result = await promise;
-      pendingModules.delete(path);
-      return result;
-    }
-
-    (async () => {
-      try {
-        const React = await import('${importMap.imports.react}');
-        const ReactDOMModule = await import('${importMap.imports['react-dom/client']}');
-        const ReactDOM = ReactDOMModule.default || ReactDOMModule;
-
-        const AppModule = await executeModule('./App.jsx');
-        const App = AppModule.default || AppModule;
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render((React.default || React).createElement(App));
-      } catch (err) {
-        document.getElementById('root').innerHTML =
-          '<div style="padding: 20px; color: red; font-family: monospace;">' +
-          '<h3>Runtime Error:</h3><pre>' + err.message + '\\n' + err.stack + '</pre></div>';
-        console.error(err);
-      }
-    })();
   </script>
 </body>
 </html>`;
