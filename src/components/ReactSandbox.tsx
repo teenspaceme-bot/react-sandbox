@@ -170,29 +170,23 @@ export function ReactSandbox() {
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const dataUrls: Record<string, string> = {};
+    const moduleRegistry: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
-      dataUrls[`./${name}`] = dataUrl;
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
-      dataUrls[`./${nameWithoutExt}`] = dataUrl;
+      moduleRegistry[nameWithoutExt] = code;
+      moduleRegistry[`./${name}`] = code;
+      moduleRegistry[`./${nameWithoutExt}`] = code;
     });
 
-    const customImportMap = {
-      imports: {
-        ...importMap.imports,
-        ...dataUrls
-      }
-    };
+    const inlineModules = Object.entries(moduleRegistry)
+      .map(([path, code]) => `'${path}': \`${code.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\``)
+      .join(',\n    ');
 
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <script type="importmap">
-    ${JSON.stringify(customImportMap, null, 2)}
-  </script>
   <style>
     body {
       margin: 0;
@@ -206,19 +200,84 @@ export function ReactSandbox() {
 <body>
   <div id="root"></div>
   <script type="module">
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
-    import App from './App.jsx';
+    const modules = {
+      ${inlineModules}
+    };
 
-    try {
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
-    } catch (err) {
-      document.getElementById('root').innerHTML =
-        '<div style="padding: 20px; color: red; font-family: monospace;">' +
-        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
-      console.error(err);
+    const moduleCache = new Map();
+    const pendingModules = new Map();
+
+    async function loadExternalModule(url) {
+      const module = await import(url);
+      return module;
     }
+
+    async function executeModule(path) {
+      if (moduleCache.has(path)) {
+        return moduleCache.get(path);
+      }
+
+      if (pendingModules.has(path)) {
+        return pendingModules.get(path);
+      }
+
+      const code = modules[path];
+      if (!code) {
+        throw new Error(\`Module not found: \${path}\`);
+      }
+
+      const promise = (async () => {
+        const transformedCode = code
+          .replace(/import\\s+({[^}]+}|\\*\\s+as\\s+\\w+|\\w+)\\s+from\\s+['"]([^'"]+)['"]/g,
+            (match, imports, modulePath) => {
+              if (modulePath === 'react' || modulePath === 'react-dom' || modulePath === 'react-dom/client') {
+                return match;
+              }
+              return \`const \${imports} = await executeModule('\${modulePath}');\`;
+            })
+          .replace(/export\\s+default\\s+/, 'const __default = ')
+          .replace(/export\\s+(?:function|class|const|let|var)\\s+(\\w+)/g, 'const $1 = $1; /*export*/')
+          .replace(/export\\s+{([^}]+)}/g, '/*export { $1 }*/');
+
+        const moduleFunction = new Function('executeModule', 'React', 'ReactDOM', \`
+          return (async () => {
+            \${transformedCode}
+            return { default: typeof __default !== 'undefined' ? __default : undefined, Button, Card };
+          })();
+        \`);
+
+        const React = await import('${importMap.imports.react}');
+        const ReactDOMModule = await import('${importMap.imports['react-dom/client']}');
+
+        const exports = await moduleFunction(executeModule, React.default || React, ReactDOMModule.default || ReactDOMModule);
+        moduleCache.set(path, exports);
+        return exports;
+      })();
+
+      pendingModules.set(path, promise);
+      const result = await promise;
+      pendingModules.delete(path);
+      return result;
+    }
+
+    (async () => {
+      try {
+        const React = await import('${importMap.imports.react}');
+        const ReactDOMModule = await import('${importMap.imports['react-dom/client']}');
+        const ReactDOM = ReactDOMModule.default || ReactDOMModule;
+
+        const AppModule = await executeModule('./App.jsx');
+        const App = AppModule.default || AppModule;
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render((React.default || React).createElement(App));
+      } catch (err) {
+        document.getElementById('root').innerHTML =
+          '<div style="padding: 20px; color: red; font-family: monospace;">' +
+          '<h3>Runtime Error:</h3><pre>' + err.message + '\\n' + err.stack + '</pre></div>';
+        console.error(err);
+      }
+    })();
   </script>
 </body>
 </html>`;
