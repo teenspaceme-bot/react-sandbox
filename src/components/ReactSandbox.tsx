@@ -33,24 +33,27 @@ const defaultFiles: FileType[] = [
 </head>
 <body>
   <div id="root"></div>
-  <script type="module">
-    import React from 'react';
-    import ReactDOM from 'react-dom/client';
-    import App from 'App';
-
-    try {
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
-    } catch (err) {
-      document.getElementById('root').innerHTML =
-        '<div style="padding: 20px; color: red; font-family: monospace;">' +
-        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
-      console.error(err);
-    }
-  </script>
+  <script type="module" src="index.jsx"></script>
 </body>
 </html>`,
     language: 'html'
+  },
+  {
+    name: 'index.jsx',
+    content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from 'App';
+
+try {
+  const root = ReactDOM.createRoot(document.getElementById('root'));
+  root.render(React.createElement(App));
+} catch (err) {
+  document.getElementById('root').innerHTML =
+    '<div style="padding: 20px; color: red; font-family: monospace;">' +
+    '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+  console.error(err);
+}`,
+    language: 'jsx'
   },
   {
     name: 'App.jsx',
@@ -279,6 +282,19 @@ export function ReactSandbox() {
         `  <script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>\n</head>`
       );
     }
+
+    // Replace script src references with data URLs
+    html = html.replace(
+      /<script\s+type="module"\s+src="([^"]+)"><\/script>/g,
+      (match, src) => {
+        const cleanSrc = src.replace(/^\.\//, '');
+        const dataUrl = dataUrls[cleanSrc];
+        if (dataUrl) {
+          return `<script type="module" src="${dataUrl}"></script>`;
+        }
+        return match;
+      }
+    );
 
     return html;
   };
