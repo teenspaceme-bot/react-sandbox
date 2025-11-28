@@ -59,7 +59,7 @@ root.render(
     <App />
   </React.StrictMode>
 );`,
-    language: 'tsx'
+    language: 'jsx'
   },
   {
     name: 'App.jsx',
