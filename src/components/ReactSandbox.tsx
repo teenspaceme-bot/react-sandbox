@@ -35,20 +35,18 @@ const defaultFiles: FileType[] = [
   <div id="root"></div>
   <script type="module">
     import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
+    import ReactDOM from 'react-dom/client';
+    import App from 'App.jsx';
 
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement(App));
+    } catch (err) {
+      document.getElementById('root').innerHTML =
+        '<div style="padding: 20px; color: red; font-family: monospace;">' +
+        '<h3>Runtime Error:</h3><pre>' + err.message + '</pre></div>';
+      console.error(err);
+    }
   </script>
 </body>
 </html>`,
