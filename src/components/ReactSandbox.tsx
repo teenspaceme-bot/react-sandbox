@@ -471,18 +471,6 @@ export function ReactSandbox() {
         <Show when={viewMode() === 'code'}>
           <div class="editor-panel">
             <div class="editor-header">
-              <button
-                class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
-                onClick={() => setViewMode('code')}
-              >
-                Code
-              </button>
-              <button
-                class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
-                onClick={() => setViewMode('preview')}
-              >
-                Preview
-              </button>
               <span class="current-file">📄 {activeFile().name}</span>
             </div>
 
