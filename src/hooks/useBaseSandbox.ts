@@ -17,6 +17,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set(['root', 'src', 'src/components']));
   const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
   const [isLoading, setIsLoading] = createSignal(false);
+  const [blobUrls, setBlobUrls] = createSignal<string[]>([]);
 
   createEffect(() => {
     setFiles(config.initialFiles);
@@ -93,24 +94,32 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const dataUrls: Record<string, string> = {};
+    blobUrls().forEach(url => URL.revokeObjectURL(url));
+
+    const newBlobUrls: string[] = [];
+    const moduleUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
       const transformedCode = code.replace(/from\s+(['"])\.\/([^'"]*)['"]/g, "from $1$2$1");
-      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
+      const blob = new Blob([transformedCode], { type: 'text/javascript' });
+      const blobUrl = URL.createObjectURL(blob);
 
-      dataUrls[name] = dataUrl;
+      newBlobUrls.push(blobUrl);
+
+      moduleUrls[name] = blobUrl;
 
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-      dataUrls[nameWithoutExt] = dataUrl;
+      moduleUrls[nameWithoutExt] = blobUrl;
 
       if (name.startsWith('src/')) {
         const nameWithoutSrc = name.replace(/^src\//, '');
-        dataUrls[nameWithoutSrc] = dataUrl;
+        moduleUrls[nameWithoutSrc] = blobUrl;
         const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-        dataUrls[nameWithoutSrcExt] = dataUrl;
+        moduleUrls[nameWithoutSrcExt] = blobUrl;
       }
     });
+
+    setBlobUrls(newBlobUrls);
 
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
@@ -132,7 +141,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     const customImportMap = {
       imports: {
         ...existingImports,
-        ...dataUrls
+        ...moduleUrls
       }
     };
 
@@ -152,9 +161,9 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
       /<script\s+type="module"\s+src="([^"]+)"><\/script>/g,
       (match, src) => {
         const cleanSrc = src.replace(/^\.\//, '');
-        const dataUrl = dataUrls[cleanSrc];
-        if (dataUrl) {
-          return `<script type="module" src="${dataUrl}"></script>`;
+        const moduleUrl = moduleUrls[cleanSrc];
+        if (moduleUrl) {
+          return `<script type="module" src="${moduleUrl}"></script>`;
         }
         return match;
       }
