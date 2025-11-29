@@ -56,12 +56,12 @@ export function compileVueFile(file: FileType): string {
     if (descriptor.styles.length > 0) {
       stylesCode = descriptor.styles.map((style, index) => {
         const css = style.content;
-        const id = `${file.name}-${index}`;
+        const safeId = file.name.replace(/[^a-zA-Z0-9]/g, '_') + '_' + index;
 
         if (style.scoped) {
           return `
 const style${index} = document.createElement('style');
-style${index}.setAttribute('data-v-${id}', '');
+style${index}.setAttribute('data-vue-style', '${safeId}');
 style${index}.textContent = \`${css.replace(/`/g, '\\`')}\`;
 document.head.appendChild(style${index});`;
         } else {
