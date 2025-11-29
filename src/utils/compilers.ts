@@ -27,8 +27,21 @@ export function compileVueFile(file: FileType): string {
     let code = '';
 
     if (descriptor.styles.length > 0) {
-      const style = descriptor.styles[0].content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-      code += `const style = document.createElement('style');\nstyle.textContent = \`${style}\`;\ndocument.head.appendChild(style);\n\n`;
+      descriptor.styles.forEach((styleBlock, index) => {
+        const compiled = VueCompiler.compileStyle({
+          source: styleBlock.content,
+          filename: file.name,
+          id: `data-v-${file.name}-${index}`,
+          scoped: styleBlock.scoped || false
+        });
+
+        if (compiled.errors.length > 0) {
+          console.error('Style compilation errors:', compiled.errors);
+        }
+
+        const processedStyle = compiled.code.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+        code += `const style${index} = document.createElement('style');\nstyle${index}.textContent = \`${processedStyle}\`;\ndocument.head.appendChild(style${index});\n\n`;
+      });
     }
 
     if (descriptor.scriptSetup || descriptor.script) {
