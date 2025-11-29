@@ -166,6 +166,7 @@ export function ReactSandbox() {
   const [iframeKey, setIframeKey] = createSignal(0);
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set(['root', 'src', 'src/components']));
   const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
+  const [isLoading, setIsLoading] = createSignal(false);
 
   const activeFile = () => files()[activeFileIndex()];
 
@@ -336,8 +337,12 @@ export function ReactSandbox() {
   };
 
   const runCode = () => {
+    setIsLoading(true);
     const compiled = compileCode();
-    if (!compiled) return;
+    if (!compiled) {
+      setIsLoading(false);
+      return;
+    }
 
     const html = generateHTML(compiled, importMap());
     const blob = new Blob([html], { type: 'text/html' });
@@ -348,12 +353,14 @@ export function ReactSandbox() {
     setTimeout(() => {
       const iframe = document.getElementById('preview-iframe') as HTMLIFrameElement;
       if (iframe) {
-        // Revoke old URL if it exists
         const oldSrc = iframe.src;
         if (oldSrc && oldSrc.startsWith('blob:')) {
           URL.revokeObjectURL(oldSrc);
         }
         iframe.src = url;
+        iframe.onload = () => {
+          setIsLoading(false);
+        };
       }
     }, 0);
   };
@@ -458,7 +465,7 @@ export function ReactSandbox() {
             <span class="current-file">📄 {activeFile().name}</span>
           </Show>
           <Show when={viewMode() === 'preview'}>
-            <button onClick={runCode} class="run-button" title="Refresh preview">↻</button>
+            <button onClick={runCode} class="refresh-button" title="Refresh preview">↻</button>
           </Show>
         </div>
       </div>
@@ -496,6 +503,12 @@ export function ReactSandbox() {
 
         <Show when={viewMode() === 'preview'}>
           <div class="preview-panel preview-fullscreen">
+            <Show when={isLoading()}>
+              <div class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">加载中...</div>
+              </div>
+            </Show>
             <iframe
               id="preview-iframe"
               data-key={iframeKey()}
