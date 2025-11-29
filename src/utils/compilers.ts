@@ -31,12 +31,24 @@ export function compileVueFile(file: FileType): string {
       code += `const style = document.createElement('style');\nstyle.textContent = \`${style}\`;\ndocument.head.appendChild(style);\n\n`;
     }
 
-    const compiled = VueCompiler.compileScript(descriptor, {
-      id: file.name,
-      inlineTemplate: true
-    });
+    if (descriptor.scriptSetup || descriptor.script) {
+      const compiled = VueCompiler.compileScript(descriptor, {
+        id: file.name
+      });
 
-    code += compiled.content;
+      const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
+
+      code += compiled.content.replace(
+        /export default/,
+        `const __component__ =`
+      );
+
+      code += `\n\n__component__.template = \`${template}\`;\nexport default __component__;\n`;
+    } else if (descriptor.template) {
+      const template = descriptor.template.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      code += `export default { template: \`${template}\` };\n`;
+    }
+
     return code;
   } catch (error: any) {
     throw new Error(`Failed to compile ${file.name}: ${error.message}`);
