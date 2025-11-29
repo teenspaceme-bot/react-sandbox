@@ -79,10 +79,15 @@ document.head.appendChild(style${index});`;
       const renderFunctionMatch = templateCode.match(/export function render\(_ctx[^)]*\) \{[\s\S]*\}/);
       const renderFunction = renderFunctionMatch ? renderFunctionMatch[0].replace('export ', '') : '';
 
-      const scriptWithoutImports = scriptContent.replace(/import\s+\{[^}]+\}\s+from\s+['"]vue['"];?/g, '');
+      const vueImports = extractImports(scriptContent);
+      const scriptWithoutVueImports = scriptContent.replace(/import\s+\{[^}]+\}\s+from\s+['"]vue['"];?\s*/g, '');
+
+      const componentImports = extractComponentImports(scriptWithoutVueImports);
+      const scriptWithoutAllImports = scriptWithoutVueImports.replace(/import\s+.+?\s+from\s+['"]\.[^'"]+['"];?\s*/g, '');
 
       compiledCode = `
-import { ${extractImports(scriptContent)} } from 'vue';
+import { ${vueImports} } from 'vue';
+${componentImports}
 
 ${renderFunction}
 
@@ -90,8 +95,8 @@ ${stylesCode}
 
 export default {
   setup() {
-    ${scriptWithoutImports.trim()}
-    return { ${extractReturnVariables(scriptWithoutImports)} };
+    ${scriptWithoutAllImports.trim()}
+    return { ${extractReturnVariables(scriptWithoutAllImports)} };
   },
   render
 };`;
@@ -129,6 +134,13 @@ function extractImports(code: string): string {
   return 'ref, reactive, computed, watch, onMounted';
 }
 
+function extractComponentImports(code: string): string {
+  const importMatches = code.match(/import\s+.+?\s+from\s+['"]\.[^'"]+['"];?/g);
+  if (importMatches) {
+    return importMatches.join('\n');
+  }
+  return '';
+}
 
 function extractReturnVariables(code: string): string {
   const varMatches = code.match(/(?:const|let|var)\s+(\w+)/g);
