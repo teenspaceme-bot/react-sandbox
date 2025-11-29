@@ -41,14 +41,14 @@ document.head.appendChild(style);
 
   if (isSetup) {
     const propsMatch = script.match(/(?:const\s+\w+\s+=\s+)?defineProps\(\{([^}]+)\}\)/);
-    const propsContent = propsMatch ? propsMatch[1] : '';
+    const propsContent = propsMatch ? propsMatch[1].trim().replace(/\s+/g, ' ') : '';
     const scriptWithoutDefineProps = script.replace(/(?:const\s+\w+\s+=\s+)?defineProps\(\{[^}]+\}\);?\s*/g, '');
 
     code += `
 import { ref, reactive, computed, watch, onMounted } from 'vue';
 
 export default {
-  ${propsContent ? `props: {${propsContent}},` : ''}
+  ${propsContent ? `props: { ${propsContent} },` : ''}
   setup(props) {
     ${scriptWithoutDefineProps}
     return { ${extractSetupReturns(scriptWithoutDefineProps)} };
