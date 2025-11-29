@@ -2,13 +2,14 @@ import { createSignal, Show } from 'solid-js'
 import { ReactSandbox } from './components/ReactSandbox'
 import { VueSandbox } from './components/VueSandbox'
 import { NativeSandbox } from './components/NativeSandbox'
+import { SolidSandbox } from './components/SolidSandbox'
 import './App.css'
 
 function App() {
-  const [framework, setFramework] = createSignal<'react' | 'vue' | 'native'>('native');
+  const [framework, setFramework] = createSignal<'react' | 'vue' | 'native' | 'solid'>('native');
 
-  const switchFramework = (newFramework: 'react' | 'vue' | 'native') => {
-    const frameworkName = newFramework === 'native' ? 'Native JS' : newFramework.toUpperCase();
+  const switchFramework = (newFramework: 'react' | 'vue' | 'native' | 'solid') => {
+    const frameworkName = newFramework === 'native' ? 'Native JS' : newFramework === 'solid' ? 'SolidJS' : newFramework.toUpperCase();
     if (confirm(`Switch to ${frameworkName}? This will reset your current work.`)) {
       setFramework(newFramework);
     }
@@ -21,6 +22,12 @@ function App() {
         onClick={() => switchFramework('native')}
       >
         Native
+      </button>
+      <button
+        class={`view-toggle-button ${framework() === 'solid' ? 'active' : ''}`}
+        onClick={() => switchFramework('solid')}
+      >
+        Solid
       </button>
       <button
         class={`view-toggle-button ${framework() === 'react' ? 'active' : ''}`}
@@ -41,6 +48,9 @@ function App() {
     <>
       <Show when={framework() === 'native'}>
         <NativeSandbox frameworkButtons={frameworkButtons} />
+      </Show>
+      <Show when={framework() === 'solid'}>
+        <SolidSandbox frameworkButtons={frameworkButtons} />
       </Show>
       <Show when={framework() === 'react'}>
         <ReactSandbox frameworkButtons={frameworkButtons} />

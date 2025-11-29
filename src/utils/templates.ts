@@ -413,3 +413,245 @@ pre {
     }
   }
 };
+
+export const solidTemplate: ProjectTemplate = {
+  framework: 'solid',
+  files: [
+    {
+      name: 'index.html',
+      content: `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script type="importmap">
+    {
+      "imports": {
+        "solid-js": "https://esm.sh/solid-js@1.8.22",
+        "solid-js/": "https://esm.sh/solid-js@1.8.22/",
+        "solid-element": "https://esm.sh/solid-element@1.8.1"
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #root {
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="./src/index.jsx"></script>
+</body>
+</html>`,
+      language: 'html'
+    },
+    {
+      name: 'src/index.jsx',
+      content: `import './components/CounterCard';
+import './components/TodoCard';
+
+const root = document.getElementById('root');
+root.innerHTML = \`
+  <div style="padding: 20px; font-family: system-ui">
+    <h1 style="text-align: center; color: #2c4f7c">SolidJS Web Components Demo</h1>
+    <counter-card></counter-card>
+    <todo-card></todo-card>
+  </div>
+\`;`,
+      language: 'jsx'
+    },
+    {
+      name: 'src/components/CounterCard.jsx',
+      content: `import { createSignal } from 'solid-js';
+import { customElement } from 'solid-element';
+
+function CounterCard() {
+  const [count, setCount] = createSignal(0);
+
+  return (
+    <div style={{
+      border: '1px solid #ddd',
+      borderRadius: '8px',
+      padding: '20px',
+      marginBottom: '20px',
+      backgroundColor: '#f9f9f9',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      maxWidth: '500px',
+      margin: '0 auto 20px'
+    }}>
+      <h2 style={{ marginTop: 0, color: '#333' }}>Counter Example</h2>
+      <p style={{ fontSize: '18px', margin: '15px 0' }}>
+        Count: <strong>{count()}</strong>
+      </p>
+      <button
+        onClick={() => setCount(count() + 1)}
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px',
+          backgroundColor: '#2c4f7c',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+          marginRight: '10px'
+        }}
+      >
+        Increment
+      </button>
+      <button
+        onClick={() => setCount(count() - 1)}
+        style={{
+          padding: '10px 20px',
+          fontSize: '16px',
+          backgroundColor: '#2c4f7c',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }}
+      >
+        Decrement
+      </button>
+    </div>
+  );
+}
+
+customElement('counter-card', {}, CounterCard);`,
+      language: 'jsx'
+    },
+    {
+      name: 'src/components/TodoCard.jsx',
+      content: `import { createSignal, For } from 'solid-js';
+import { customElement } from 'solid-element';
+
+function TodoCard() {
+  const [todos, setTodos] = createSignal([
+    { id: 1, text: 'Learn SolidJS', done: false },
+    { id: 2, text: 'Build with Web Components', done: false }
+  ]);
+  const [input, setInput] = createSignal('');
+
+  const addTodo = () => {
+    const text = input().trim();
+    if (text) {
+      setTodos([...todos(), {
+        id: Date.now(),
+        text,
+        done: false
+      }]);
+      setInput('');
+    }
+  };
+
+  const toggleTodo = (id) => {
+    setTodos(todos().map(todo =>
+      todo.id === id ? { ...todo, done: !todo.done } : todo
+    ));
+  };
+
+  const removeTodo = (id) => {
+    setTodos(todos().filter(todo => todo.id !== id));
+  };
+
+  return (
+    <div style={{
+      border: '1px solid #ddd',
+      borderRadius: '8px',
+      padding: '20px',
+      backgroundColor: '#f9f9f9',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      maxWidth: '500px',
+      margin: '0 auto'
+    }}>
+      <h2 style={{ marginTop: 0, color: '#333' }}>Todo List</h2>
+      <div style={{ marginBottom: '15px' }}>
+        <input
+          type="text"
+          value={input()}
+          onInput={(e) => setInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && addTodo()}
+          placeholder="Add a new todo..."
+          style={{
+            padding: '8px 12px',
+            fontSize: '14px',
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            width: 'calc(100% - 100px)',
+            marginRight: '10px'
+          }}
+        />
+        <button
+          onClick={addTodo}
+          style={{
+            padding: '8px 16px',
+            fontSize: '14px',
+            backgroundColor: '#2c4f7c',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}
+        >
+          Add
+        </button>
+      </div>
+      <For each={todos()}>
+        {(todo) => (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '10px',
+            backgroundColor: 'white',
+            borderRadius: '4px',
+            marginBottom: '8px'
+          }}>
+            <input
+              type="checkbox"
+              checked={todo.done}
+              onChange={() => toggleTodo(todo.id)}
+              style={{ marginRight: '10px', cursor: 'pointer' }}
+            />
+            <span style={{
+              flex: 1,
+              textDecoration: todo.done ? 'line-through' : 'none',
+              color: todo.done ? '#999' : '#333'
+            }}>
+              {todo.text}
+            </span>
+            <button
+              onClick={() => removeTodo(todo.id)}
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                backgroundColor: '#dc3545',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer'
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </For>
+    </div>
+  );
+}
+
+customElement('todo-card', {}, TodoCard);`,
+      language: 'jsx'
+    }
+  ],
+  importMap: {
+    imports: {
+      'solid-js': 'https://esm.sh/solid-js@1.8.22',
+      'solid-js/': 'https://esm.sh/solid-js@1.8.22/',
+      'solid-element': 'https://esm.sh/solid-element@1.8.1'
+    }
+  }
+};

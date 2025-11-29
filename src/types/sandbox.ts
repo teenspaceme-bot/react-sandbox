@@ -1,4 +1,4 @@
-export type FrameworkType = 'react' | 'vue' | 'native';
+export type FrameworkType = 'react' | 'vue' | 'native' | 'solid';
 
 export interface FileType {
   name: string;
