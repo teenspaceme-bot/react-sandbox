@@ -501,28 +501,30 @@ export function ReactSandbox() {
           </div>
         </Show>
 
-        <div class="preview-panel" classList={{ 'preview-fullscreen': viewMode() === 'preview' }}>
-          <div class="preview-header">
-            <button
-              class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
-              onClick={() => setViewMode('code')}
-            >
-              Code
-            </button>
-            <button
-              class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
-              onClick={() => setViewMode('preview')}
-            >
-              Preview
-            </button>
+        <Show when={viewMode() === 'preview'}>
+          <div class="preview-panel preview-fullscreen">
+            <div class="preview-header">
+              <button
+                class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
+                onClick={() => setViewMode('code')}
+              >
+                Code
+              </button>
+              <button
+                class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
+                onClick={() => setViewMode('preview')}
+              >
+                Preview
+              </button>
+            </div>
+            <iframe
+              id="preview-iframe"
+              data-key={iframeKey()}
+              class="preview-iframe"
+              sandbox="allow-scripts allow-modals"
+            />
           </div>
-          <iframe
-            id="preview-iframe"
-            data-key={iframeKey()}
-            class="preview-iframe"
-            sandbox="allow-scripts allow-modals"
-          />
-        </div>
+        </Show>
       </div>
 
       <div class="import-map-section">
