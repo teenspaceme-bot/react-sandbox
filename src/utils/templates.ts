@@ -468,44 +468,21 @@ root.innerHTML = \`
     {
       name: 'src/components/CounterCard.jsx',
       content: `import { createSignal } from 'solid-js';
-import { render } from 'solid-js/web';
 import { customElement } from 'solid-element';
 
 function CounterCard() {
   const [count, setCount] = createSignal(0);
 
-  const cardStyle = {
-    border: '1px solid #ddd',
-    borderRadius: '8px',
-    padding: '20px',
-    marginBottom: '20px',
-    backgroundColor: '#f9f9f9',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    maxWidth: '500px',
-    margin: '0 auto 20px'
-  };
-
-  const buttonStyle = {
-    padding: '10px 20px',
-    fontSize: '16px',
-    backgroundColor: '#2c4f7c',
-    color: 'white',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    marginRight: '10px'
-  };
-
   return (
-    <div style={cardStyle}>
+    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto 20px">
       <h2 style="margin-top: 0; color: #333">Counter Example</h2>
       <p style="font-size: 18px; margin: 15px 0">
         Count: <strong>{count()}</strong>
       </p>
-      <button onClick={() => setCount(count() + 1)} style={buttonStyle}>
+      <button onClick={() => setCount(count() + 1)} style="padding: 10px 20px; font-size: 16px; background-color: #2c4f7c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px">
         Increment
       </button>
-      <button onClick={() => setCount(count() - 1)} style={buttonStyle}>
+      <button onClick={() => setCount(count() - 1)} style="padding: 10px 20px; font-size: 16px; background-color: #2c4f7c; color: white; border: none; border-radius: 4px; cursor: pointer">
         Decrement
       </button>
     </div>
@@ -550,81 +527,39 @@ function TodoCard() {
   };
 
   return (
-    <div style={{
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      padding: '20px',
-      backgroundColor: '#f9f9f9',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      maxWidth: '500px',
-      margin: '0 auto'
-    }}>
-      <h2 style={{ marginTop: 0, color: '#333' }}>Todo List</h2>
-      <div style={{ marginBottom: '15px' }}>
+    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; background-color: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto">
+      <h2 style="margin-top: 0; color: #333">Todo List</h2>
+      <div style="margin-bottom: 15px">
         <input
           type="text"
           value={input()}
           onInput={(e) => setInput(e.target.value)}
           onKeyPress={(e) => e.key === 'Enter' && addTodo()}
           placeholder="Add a new todo..."
-          style={{
-            padding: '8px 12px',
-            fontSize: '14px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            width: 'calc(100% - 100px)',
-            marginRight: '10px'
-          }}
+          style="padding: 8px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; width: calc(100% - 100px); margin-right: 10px"
         />
         <button
           onClick={addTodo}
-          style={{
-            padding: '8px 16px',
-            fontSize: '14px',
-            backgroundColor: '#2c4f7c',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer'
-          }}
+          style="padding: 8px 16px; font-size: 14px; background-color: #2c4f7c; color: white; border: none; border-radius: 4px; cursor: pointer"
         >
           Add
         </button>
       </div>
       <For each={todos()}>
         {(todo) => (
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            padding: '10px',
-            backgroundColor: 'white',
-            borderRadius: '4px',
-            marginBottom: '8px'
-          }}>
+          <div style="display: flex; align-items: center; padding: 10px; background-color: white; border-radius: 4px; margin-bottom: 8px">
             <input
               type="checkbox"
               checked={todo.done}
               onChange={() => toggleTodo(todo.id)}
-              style={{ marginRight: '10px', cursor: 'pointer' }}
+              style="margin-right: 10px; cursor: pointer"
             />
-            <span style={{
-              flex: 1,
-              textDecoration: todo.done ? 'line-through' : 'none',
-              color: todo.done ? '#999' : '#333'
-            }}>
+            <span style={todo.done ? 'flex: 1; text-decoration: line-through; color: #999' : 'flex: 1; text-decoration: none; color: #333'}>
               {todo.text}
             </span>
             <button
               onClick={() => removeTodo(todo.id)}
-              style={{
-                padding: '4px 8px',
-                fontSize: '12px',
-                backgroundColor: '#dc3545',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
+              style="padding: 4px 8px; font-size: 12px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer"
             >
               Delete
             </button>
