@@ -141,12 +141,30 @@ const defaultImportMap: ImportMapType = {
   }
 };
 
+interface FolderNode {
+  name: string;
+  path: string;
+  type: 'folder';
+  children: (FolderNode | FileNode)[];
+  expanded: boolean;
+}
+
+interface FileNode {
+  name: string;
+  path: string;
+  type: 'file';
+  fileIndex: number;
+}
+
+type TreeNode = FolderNode | FileNode;
+
 export function ReactSandbox() {
   const [files, setFiles] = createSignal<FileType[]>(defaultFiles);
   const [activeFileIndex, setActiveFileIndex] = createSignal(0);
   const [importMap, setImportMap] = createSignal<ImportMapType>(defaultImportMap);
   const [error, setError] = createSignal<string>('');
   const [iframeKey, setIframeKey] = createSignal(0);
+  const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set(['root', 'src', 'src/components']));
 
   const activeFile = () => files()[activeFileIndex()];
 
@@ -174,6 +192,115 @@ export function ReactSandbox() {
       if (activeFileIndex() >= index && activeFileIndex() > 0) {
         setActiveFileIndex(activeFileIndex() - 1);
       }
+    }
+  };
+
+  const buildFileTree = (): TreeNode[] => {
+    const root: TreeNode[] = [];
+    const folderMap = new Map<string, FolderNode>();
+
+    files().forEach((file, index) => {
+      const parts = file.name.split('/');
+
+      if (parts.length === 1) {
+        root.push({
+          name: file.name,
+          path: file.name,
+          type: 'file',
+          fileIndex: index
+        });
+      } else {
+        let currentPath = '';
+        let currentLevel: TreeNode[] = root;
+
+        for (let i = 0; i < parts.length - 1; i++) {
+          const folderName = parts[i];
+          currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+
+          if (!folderMap.has(currentPath)) {
+            const folder: FolderNode = {
+              name: folderName,
+              path: currentPath,
+              type: 'folder',
+              children: [],
+              expanded: expandedFolders().has(currentPath)
+            };
+            folderMap.set(currentPath, folder);
+            currentLevel.push(folder);
+            currentLevel = folder.children;
+          } else {
+            currentLevel = folderMap.get(currentPath)!.children;
+          }
+        }
+
+        currentLevel.push({
+          name: parts[parts.length - 1],
+          path: file.name,
+          type: 'file',
+          fileIndex: index
+        });
+      }
+    });
+
+    return root;
+  };
+
+  const toggleFolder = (path: string) => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(path)) {
+        newSet.delete(path);
+      } else {
+        newSet.add(path);
+      }
+      return newSet;
+    });
+  };
+
+  const renderTreeNode = (node: TreeNode, depth: number = 0) => {
+    if (node.type === 'file') {
+      return (
+        <div
+          class={`file-item ${node.fileIndex === activeFileIndex() ? 'active' : ''}`}
+          onClick={() => setActiveFileIndex(node.fileIndex)}
+          style={{ 'padding-left': `${depth * 16 + 12}px` }}
+        >
+          <span class="file-icon">📄</span>
+          <span class="file-name">{node.name}</span>
+          <Show when={files().length > 1}>
+            <button
+              class="delete-file"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteFile(node.fileIndex);
+              }}
+              title="Delete file"
+            >
+              ×
+            </button>
+          </Show>
+        </div>
+      );
+    } else {
+      const isExpanded = expandedFolders().has(node.path);
+      return (
+        <>
+          <div
+            class="folder-item"
+            onClick={() => toggleFolder(node.path)}
+            style={{ 'padding-left': `${depth * 16 + 12}px` }}
+          >
+            <span class="folder-icon">{isExpanded ? '📂' : '📁'}</span>
+            <span class="folder-name">{node.name}</span>
+            <span class="folder-toggle">{isExpanded ? '▼' : '▶'}</span>
+          </div>
+          <Show when={isExpanded}>
+            <For each={node.children}>
+              {(child) => renderTreeNode(child, depth + 1)}
+            </For>
+          </Show>
+        </>
+      );
     }
   };
 
@@ -316,39 +443,13 @@ export function ReactSandbox() {
         <div class="file-explorer">
           <div class="explorer-header">FILES</div>
           <div class="file-tree">
-            <div class="folder-item">
-              <span class="folder-icon">📁</span>
-              <span class="folder-name">src</span>
-            </div>
-            <div class="folder-content">
-              <For each={files()}>
-                {(file, i) => (
-                  <div
-                    class={`file-item ${i() === activeFileIndex() ? 'active' : ''}`}
-                    onClick={() => setActiveFileIndex(i())}
-                  >
-                    <span class="file-icon">📄</span>
-                    <span class="file-name">{file.name}</span>
-                    <Show when={files().length > 1}>
-                      <button
-                        class="delete-file"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteFile(i());
-                        }}
-                        title="Delete file"
-                      >
-                        ×
-                      </button>
-                    </Show>
-                  </div>
-                )}
-              </For>
-            </div>
-            <button class="add-file-button" onClick={addFile}>
-              <span class="add-icon">+</span> New File
-            </button>
+            <For each={buildFileTree()}>
+              {(node) => renderTreeNode(node, 0)}
+            </For>
           </div>
+          <button class="add-file-button" onClick={addFile}>
+            <span class="add-icon">+</span> New File
+          </button>
         </div>
 
         <div class="editor-panel">

@@ -75,18 +75,29 @@
   font-size: 13px;
   color: #d4d4d4;
   user-select: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.folder-item:hover {
+  background: #2a2d2e;
 }
 
 .folder-icon {
   font-size: 16px;
+  transition: transform 0.2s;
 }
 
 .folder-name {
+  flex: 1;
   font-weight: 500;
 }
 
-.folder-content {
-  padding-left: 12px;
+.folder-toggle {
+  font-size: 10px;
+  color: #858585;
+  width: 12px;
+  text-align: center;
 }
 
 .file-item {
