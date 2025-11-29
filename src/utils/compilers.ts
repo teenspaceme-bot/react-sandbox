@@ -16,6 +16,30 @@ export function compileReactFile(file: FileType): string {
   return file.content;
 }
 
+function compileVueTemplate(
+  descriptor: VueCompiler.SFCDescriptor,
+  file: FileType,
+  scopeId: string,
+  bindings?: VueCompiler.BindingMetadata
+) {
+  const templateResult = VueCompiler.compileTemplate({
+    source: descriptor.template!.content,
+    filename: file.name,
+    id: scopeId,
+    scoped: descriptor.styles.some(s => s.scoped),
+    compilerOptions: {
+      mode: 'module',
+      ...(bindings && { bindingMetadata: bindings })
+    }
+  });
+
+  if (templateResult.errors.length > 0) {
+    console.error('Template compilation errors:', templateResult.errors);
+  }
+
+  return templateResult.code;
+}
+
 export function compileVueFile(file: FileType): string {
   if (file.language !== 'vue') {
     return file.content;
@@ -44,59 +68,53 @@ export function compileVueFile(file: FileType): string {
       });
     }
 
-    if (!descriptor.scriptSetup && !descriptor.script) {
-      throw new Error(`${file.name} must have a <script> or <script setup> block`);
-    }
-
-    const compiled = VueCompiler.compileScript(descriptor, {
-      id: scopeId,
-      inlineTemplate: false
-    });
-
-    let scriptContent = compiled.content;
-
-    if (descriptor.scriptSetup) {
-      scriptContent = scriptContent
-        .replace(/export default/, 'const __sfc__ =')
-        .replace(/defineComponent/, '_defineComponent');
-
-      if (!scriptContent.includes('import')) {
-        code += `import { defineComponent as _defineComponent } from 'vue';\n`;
-      }
-    } else {
-      scriptContent = scriptContent
-        .replace(/export default/, 'const __sfc__ =');
-    }
-
-    code += scriptContent;
-
-    if (descriptor.template) {
-      const templateResult = VueCompiler.compileTemplate({
-        source: descriptor.template.content,
-        filename: file.name,
+    if (descriptor.scriptSetup || descriptor.script) {
+      const compiled = VueCompiler.compileScript(descriptor, {
         id: scopeId,
-        scoped: descriptor.styles.some(s => s.scoped),
-        compilerOptions: {
-          mode: 'module',
-          bindingMetadata: compiled.bindings
-        }
+        inlineTemplate: false
       });
 
-      if (templateResult.errors.length > 0) {
-        console.error('Template compilation errors:', templateResult.errors);
+      let scriptContent = compiled.content;
+
+      if (descriptor.scriptSetup) {
+        scriptContent = scriptContent
+          .replace(/export default/, 'const __sfc__ =')
+          .replace(/defineComponent/, '_defineComponent');
+
+        if (!scriptContent.includes('import')) {
+          code += `import { defineComponent as _defineComponent } from 'vue';\n`;
+        }
+      } else {
+        scriptContent = scriptContent
+          .replace(/export default/, 'const __sfc__ =');
       }
 
-      code += `\n${templateResult.code}\n`;
-      code += `__sfc__.render = render;\n`;
-    }
+      code += scriptContent;
 
-    const hasScoped = descriptor.styles.some(s => s.scoped);
-    if (hasScoped) {
-      code += `__sfc__.__scopeId = '${scopeId}';\n`;
-    }
+      if (descriptor.template) {
+        const templateCode = compileVueTemplate(descriptor, file, scopeId, compiled.bindings);
+        code += `\n${templateCode}\n`;
+        code += `__sfc__.render = render;\n`;
+      }
 
-    code += `__sfc__.__file = '${file.name}';\n`;
-    code += `export default __sfc__;\n`;
+      const hasScoped = descriptor.styles.some(s => s.scoped);
+      if (hasScoped) {
+        code += `__sfc__.__scopeId = '${scopeId}';\n`;
+      }
+
+      code += `__sfc__.__file = '${file.name}';\n`;
+      code += `export default __sfc__;\n`;
+    } else if (descriptor.template) {
+      const templateCode = compileVueTemplate(descriptor, file, scopeId);
+      code += `${templateCode}\n`;
+
+      const hasScoped = descriptor.styles.some(s => s.scoped);
+      code += `const __sfc__ = { render };\n`;
+      if (hasScoped) {
+        code += `__sfc__.__scopeId = '${scopeId}';\n`;
+      }
+      code += `export default __sfc__;\n`;
+    }
 
     return code;
   } catch (error: any) {
