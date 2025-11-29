@@ -30,6 +30,21 @@ export const solidCompiler: Compiler = {
             generate: 'dom'
           }]
         ],
+        plugins: [
+          function() {
+            return {
+              visitor: {
+                ImportDeclaration(path: any) {
+                  const source = path.node.source.value;
+                  if (source.startsWith('./') || source.startsWith('../')) {
+                    const newSource = source.replace(/^\.\//, '').replace(/\.(jsx|tsx|js|ts)$/, '');
+                    path.node.source.value = newSource;
+                  }
+                }
+              }
+            };
+          }
+        ],
         filename: file.name
       });
       return result.code || '';
