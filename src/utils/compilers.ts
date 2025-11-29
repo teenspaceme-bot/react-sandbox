@@ -31,7 +31,7 @@ export function compileVueFile(file: FileType): string {
     }
 
     const scriptContent = descriptor.script?.content || descriptor.scriptSetup?.content || '';
-    const isSetup = !!descriptor.scriptSetup;
+    const isSetup = !!descriptor.scriptSetup && scriptContent.trim().length > 0;
 
     let templateCode = '';
     if (descriptor.template) {
@@ -100,7 +100,7 @@ export default {
   },
   render
 };`;
-    } else {
+    } else if (scriptContent.trim().length > 0) {
       const importsMatch = scriptContent.match(/import\s+.*?from\s+['"]vue['"];?/g);
       const imports = importsMatch ? importsMatch.join('\n') : '';
       const scriptWithoutImports = scriptContent.replace(/import\s+.*?from\s+['"]vue['"];?/g, '');
@@ -118,6 +118,15 @@ if (typeof __default__ !== 'undefined' && __default__.render) {
   __default__.render = render;
 }
 `;
+    } else {
+      compiledCode = `
+${templateCode.replace(/export function render/, 'function render')}
+
+${stylesCode}
+
+export default {
+  render
+};`;
     }
 
     return compiledCode;
