@@ -426,9 +426,8 @@ export const solidTemplate: ProjectTemplate = {
   <script type="importmap">
     {
       "imports": {
-        "solid-js": "https://esm.sh/solid-js@1.8.22",
-        "solid-js/": "https://esm.sh/solid-js@1.8.22/",
-        "solid-js/web": "https://esm.sh/solid-js@1.8.22/web",
+        "solid-js": "https://cdn.jsdelivr.net/npm/solid-js@1.8.22/dist/solid.js",
+        "solid-js/web": "https://cdn.jsdelivr.net/npm/solid-js@1.8.22/web/dist/web.js",
         "solid-element": "https://esm.sh/solid-element@1.8.1"
       }
     }
@@ -474,15 +473,41 @@ function CounterCard() {
   const [count, setCount] = createSignal(0);
 
   return (
-    <div style="border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; background-color: #f9f9f9; box-shadow: 0 2px 4px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto 20px">
-      <h2 style="margin-top: 0; color: #333">Counter Example</h2>
-      <p style="font-size: 18px; margin: 15px 0">
+    <div style={{
+      border: '1px solid #ddd',
+      'border-radius': '8px',
+      padding: '20px',
+      'margin-bottom': '20px',
+      'background-color': '#f9f9f9',
+      'box-shadow': '0 2px 4px rgba(0,0,0,0.1)',
+      'max-width': '500px',
+      margin: '0 auto 20px'
+    }}>
+      <h2 style={{ 'margin-top': 0, color: '#333' }}>Counter Example</h2>
+      <p style={{ 'font-size': '18px', margin: '15px 0' }}>
         Count: <strong>{count()}</strong>
       </p>
-      <button onClick={() => setCount(count() + 1)} style="padding: 10px 20px; font-size: 16px; background-color: #2c4f7c; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px">
+      <button onClick={() => setCount(count() + 1)} style={{
+        padding: '10px 20px',
+        'font-size': '16px',
+        'background-color': '#2c4f7c',
+        color: 'white',
+        border: 'none',
+        'border-radius': '4px',
+        cursor: 'pointer',
+        'margin-right': '10px'
+      }}>
         Increment
       </button>
-      <button onClick={() => setCount(count() - 1)} style="padding: 10px 20px; font-size: 16px; background-color: #2c4f7c; color: white; border: none; border-radius: 4px; cursor: pointer">
+      <button onClick={() => setCount(count() - 1)} style={{
+        padding: '10px 20px',
+        'font-size': '16px',
+        'background-color': '#2c4f7c',
+        color: 'white',
+        border: 'none',
+        'border-radius': '4px',
+        cursor: 'pointer'
+      }}>
         Decrement
       </button>
     </div>
@@ -576,9 +601,8 @@ customElement('todo-card', {}, TodoCard);`,
   ],
   importMap: {
     imports: {
-      'solid-js': 'https://esm.sh/solid-js@1.8.22',
-      'solid-js/': 'https://esm.sh/solid-js@1.8.22/',
-      'solid-js/web': 'https://esm.sh/solid-js@1.8.22/web',
+      'solid-js': 'https://cdn.jsdelivr.net/npm/solid-js@1.8.22/dist/solid.js',
+      'solid-js/web': 'https://cdn.jsdelivr.net/npm/solid-js@1.8.22/web/dist/web.js',
       'solid-element': 'https://esm.sh/solid-element@1.8.1'
     }
   }
