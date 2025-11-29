@@ -211,6 +211,9 @@ const count = ref(0);
   </button>
 </template>
 
+<script setup>
+</script>
+
 <style scoped>
 .btn {
   padding: 10px 20px;
