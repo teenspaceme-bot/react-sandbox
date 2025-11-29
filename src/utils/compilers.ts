@@ -24,6 +24,7 @@ export function compileVueFile(file: FileType): string {
   try {
     const { descriptor } = VueCompiler.parse(file.content, { filename: file.name });
 
+    const scopeId = `data-v-${Math.random().toString(36).slice(2, 10)}`;
     let code = '';
 
     if (descriptor.styles.length > 0) {
@@ -31,7 +32,7 @@ export function compileVueFile(file: FileType): string {
         const compiled = VueCompiler.compileStyle({
           source: styleBlock.content,
           filename: file.name,
-          id: `data-v-${file.name}-${index}`,
+          id: scopeId,
           scoped: styleBlock.scoped || false
         });
 
@@ -46,7 +47,7 @@ export function compileVueFile(file: FileType): string {
 
     if (descriptor.scriptSetup || descriptor.script) {
       const compiled = VueCompiler.compileScript(descriptor, {
-        id: file.name
+        id: scopeId
       });
 
       const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
@@ -59,10 +60,22 @@ export function compileVueFile(file: FileType): string {
         .replace(/return __returned__/, '');
 
       code += scriptContent.replace(/export default/, 'const __sfc__ =');
-      code += `\n__sfc__.template = \`${template}\`;\nexport default __sfc__;\n`;
+      code += `\n__sfc__.template = \`${template}\`;\n`;
+
+      const hasScoped = descriptor.styles.some(s => s.scoped);
+      if (hasScoped) {
+        code += `__sfc__.__scopeId = '${scopeId}';\n`;
+      }
+
+      code += `export default __sfc__;\n`;
     } else if (descriptor.template) {
       const template = descriptor.template.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
-      code += `export default { template: \`${template}\` };\n`;
+      const hasScoped = descriptor.styles.some(s => s.scoped);
+      code += `const __sfc__ = { template: \`${template}\` };\n`;
+      if (hasScoped) {
+        code += `__sfc__.__scopeId = '${scopeId}';\n`;
+      }
+      code += `export default __sfc__;\n`;
     }
 
     return code;
