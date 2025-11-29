@@ -1,9 +1,9 @@
-export type FrameworkType = 'react' | 'vue';
+export type FrameworkType = 'react' | 'vue' | 'native';
 
 export interface FileType {
   name: string;
   content: string;
-  language?: 'javascript' | 'typescript' | 'jsx' | 'tsx' | 'html' | 'vue';
+  language?: 'javascript' | 'typescript' | 'jsx' | 'tsx' | 'html' | 'vue' | 'css';
 }
 
 export interface ImportMapType {

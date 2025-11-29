@@ -165,13 +165,26 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
 
   const runCode = async () => {
     setIsLoading(true);
-    const compiled = await compileCode();
-    if (!compiled) {
-      setIsLoading(false);
-      return;
+
+    let html: string;
+    if (config.compiler.compileAll) {
+      try {
+        setError('');
+        html = await config.compiler.compileAll(files(), importMap());
+      } catch (err: any) {
+        setError(err.message);
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      const compiled = await compileCode();
+      if (!compiled) {
+        setIsLoading(false);
+        return;
+      }
+      html = generateHTML(compiled, importMap());
     }
 
-    const html = generateHTML(compiled, importMap());
     const blob = new Blob([html], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
 
