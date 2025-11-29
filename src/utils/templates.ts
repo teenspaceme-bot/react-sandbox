@@ -427,7 +427,7 @@ export const solidTemplate: ProjectTemplate = {
     {
       "imports": {
         "solid-js": "https://esm.sh/solid-js@1.8.22",
-        "solid-js/web": "https://esm.sh/solid-js@1.8.22",
+        "solid-js/web": "https://esm.sh/solid-js@1.8.22/web",
         "solid-element": "https://esm.sh/solid-element@1.8.1"
       }
     }
