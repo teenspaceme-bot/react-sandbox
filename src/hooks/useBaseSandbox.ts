@@ -95,31 +95,28 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
     blobUrls().forEach(url => URL.revokeObjectURL(url));
+    setBlobUrls([]);
 
-    const newBlobUrls: string[] = [];
     const moduleUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      const transformedCode = code.replace(/from\s+(['"])\.\/([^'"]*)['"]/g, "from $1$2$1");
-      const blob = new Blob([transformedCode], { type: 'text/javascript' });
-      const blobUrl = URL.createObjectURL(blob);
+      if (!name.endsWith('.html')) {
+        const transformedCode = code.replace(/from\s+(['"])\.\/([^'"]*)['"]/g, "from $1$2$1");
+        const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
 
-      newBlobUrls.push(blobUrl);
+        moduleUrls[name] = dataUrl;
 
-      moduleUrls[name] = blobUrl;
+        const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
+        moduleUrls[nameWithoutExt] = dataUrl;
 
-      const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-      moduleUrls[nameWithoutExt] = blobUrl;
-
-      if (name.startsWith('src/')) {
-        const nameWithoutSrc = name.replace(/^src\//, '');
-        moduleUrls[nameWithoutSrc] = blobUrl;
-        const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-        moduleUrls[nameWithoutSrcExt] = blobUrl;
+        if (name.startsWith('src/')) {
+          const nameWithoutSrc = name.replace(/^src\//, '');
+          moduleUrls[nameWithoutSrc] = dataUrl;
+          const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
+          moduleUrls[nameWithoutSrcExt] = dataUrl;
+        }
       }
     });
-
-    setBlobUrls(newBlobUrls);
 
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
