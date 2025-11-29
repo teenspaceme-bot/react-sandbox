@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js'
+import { createSignal, Show } from 'solid-js'
 import { ReactSandbox } from './components/ReactSandbox'
 import { VueSandbox } from './components/VueSandbox'
 import './App.css'
@@ -29,7 +29,16 @@ function App() {
     </>
   );
 
-  return framework() === 'react' ? <ReactSandbox frameworkButtons={frameworkButtons} /> : <VueSandbox frameworkButtons={frameworkButtons} />
+  return (
+    <>
+      <Show when={framework() === 'react'}>
+        <ReactSandbox frameworkButtons={frameworkButtons} />
+      </Show>
+      <Show when={framework() === 'vue'}>
+        <VueSandbox frameworkButtons={frameworkButtons} />
+      </Show>
+    </>
+  )
 }
 
 export default App

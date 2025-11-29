@@ -18,6 +18,14 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
   const [isLoading, setIsLoading] = createSignal(false);
 
+  createEffect(() => {
+    setFiles(config.initialFiles);
+    setActiveFileIndex(0);
+    setImportMap(config.initialImportMap);
+    setError('');
+    setViewMode('code');
+  });
+
   const activeFile = () => files()[activeFileIndex()];
 
   const updateFileContent = (content: string) => {
