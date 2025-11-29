@@ -38,12 +38,13 @@ export function compileVueFile(file: FileType): string {
 
       const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
 
-      code += compiled.content.replace(
-        /export default/,
-        `const __component__ =`
-      );
+      let scriptContent = compiled.content
+        .replace(/const __returned__ = \{([^}]+)\}/, 'return { $1 }')
+        .replace(/Object\.defineProperty\(__returned__[^\n]+\n/, '')
+        .replace(/return __returned__/, '');
 
-      code += `\n\n__component__.template = \`${template}\`;\nexport default __component__;\n`;
+      code += scriptContent.replace(/export default/, 'const __sfc__ =');
+      code += `\n__sfc__.template = \`${template}\`;\nexport default __sfc__;\n`;
     } else if (descriptor.template) {
       const template = descriptor.template.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
       code += `export default { template: \`${template}\` };\n`;
