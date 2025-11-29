@@ -33,13 +33,13 @@ const defaultFiles: FileType[] = [
 </head>
 <body>
   <div id="root"></div>
-  <script type="module" src="index.jsx"></script>
+  <script type="module" src="./src/index.jsx"></script>
 </body>
 </html>`,
     language: 'html'
   },
   {
-    name: 'index.jsx',
+    name: 'src/index.jsx',
     content: `import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
@@ -58,10 +58,10 @@ root.render(
     language: 'jsx'
   },
   {
-    name: 'App.jsx',
+    name: 'src/App.jsx',
     content: `import React, { useState } from 'react';
-import { Button } from './Button';
-import { Card } from './Card';
+import { Button } from './components/Button';
+import { Card } from './components/Card';
 
 function App() {
   const [count, setCount] = useState(0);
@@ -86,7 +86,7 @@ export default App;`,
     language: 'jsx'
   },
   {
-    name: 'Button.jsx',
+    name: 'src/components/Button.jsx',
     content: `import React from 'react';
 
 export function Button({ children, onClick }) {
@@ -111,7 +111,7 @@ export function Button({ children, onClick }) {
     language: 'jsx'
   },
   {
-    name: 'Card.jsx',
+    name: 'src/components/Card.jsx',
     content: `import React from 'react';
 
 export function Card({ title, children }) {
@@ -234,20 +234,25 @@ export function ReactSandbox() {
     const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      // Replace relative imports with absolute module names
       const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
-
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
+
       dataUrls[name] = dataUrl;
+
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
       dataUrls[nameWithoutExt] = dataUrl;
+
+      if (name.startsWith('src/')) {
+        const nameWithoutSrc = name.replace(/^src\//, '');
+        dataUrls[nameWithoutSrc] = dataUrl;
+        const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts)$/, '');
+        dataUrls[nameWithoutSrcExt] = dataUrl;
+      }
     });
 
-    // Find the index.html file in the files array
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
 
-    // Extract existing import map from the HTML file if present
     const importMapMatch = html.match(/<script type="importmap">\s*([\s\S]*?)\s*<\/script>/);
     let existingImports = {};
 
@@ -256,11 +261,9 @@ export function ReactSandbox() {
         const parsed = JSON.parse(importMapMatch[1]);
         existingImports = parsed.imports || {};
       } catch (e) {
-        // If parsing fails, use default importMap
         existingImports = importMap.imports;
       }
     } else {
-      // If no import map in HTML, use default importMap
       existingImports = importMap.imports;
     }
 
@@ -271,21 +274,18 @@ export function ReactSandbox() {
       }
     };
 
-    // Replace or insert the import map in the HTML
     if (importMapMatch) {
       html = html.replace(
         /<script type="importmap">[\s\S]*?<\/script>/,
         `<script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>`
       );
     } else {
-      // If no import map exists, insert it in the head
       html = html.replace(
         /<\/head>/,
         `  <script type="importmap">\n${JSON.stringify(customImportMap, null, 2)}\n  </script>\n</head>`
       );
     }
 
-    // Replace script src references with data URLs
     html = html.replace(
       /<script\s+type="module"\s+src="([^"]+)"><\/script>/g,
       (match, src) => {
