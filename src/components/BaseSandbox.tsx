@@ -1,6 +1,6 @@
 import { For, Show } from 'solid-js';
 import type { FileType } from '../types/sandbox';
-import './WebSandbox.css';
+import './BaseSandbox.css';
 
 interface FolderNode {
   name: string;
