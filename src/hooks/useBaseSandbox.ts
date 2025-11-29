@@ -222,7 +222,8 @@ ${FETCH_INTERCEPTOR}
           iframe.contentWindow?.postMessage({
             type: 'RUN_CODE',
             html: html,
-            files: compiledFiles
+            files: compiledFiles,
+            importMap: importMap()
           }, '*');
         };
       }

@@ -20,7 +20,7 @@ self.addEventListener('message', (event) => {
     console.log('[SW] Updated file cache:', Array.from(fileCache.keys()));
   } else if (event.data.type === 'UPDATE_IMPORT_MAP') {
     importMap = event.data.importMap;
-    console.log('[SW] Updated import map');
+    console.log('[SW] Updated import map:', importMap);
   } else if (event.data.type === 'CLEAR_CACHE') {
     fileCache.clear();
     console.log('[SW] Cleared file cache');
@@ -100,15 +100,26 @@ async function handleModuleRequest(url) {
 function rewriteImports(code) {
   // Rewrite bare imports to use CDN URLs from import map
   let rewritten = code;
+  let hasRewrites = false;
 
   for (const [specifier, url] of Object.entries(importMap.imports)) {
     // Match: import ... from 'specifier'
     const importRegex = new RegExp(`from\\s+['"]${escapeRegex(specifier)}['"]`, 'g');
+    const beforeRewrite = rewritten;
     rewritten = rewritten.replace(importRegex, `from '${url}'`);
+
+    if (beforeRewrite !== rewritten) {
+      console.log(`[SW] Rewrote import: '${specifier}' -> '${url}'`);
+      hasRewrites = true;
+    }
 
     // Match: import('specifier')
     const dynamicImportRegex = new RegExp(`import\\s*\\(\\s*['"]${escapeRegex(specifier)}['"]\\s*\\)`, 'g');
     rewritten = rewritten.replace(dynamicImportRegex, `import('${url}')`);
+  }
+
+  if (!hasRewrites) {
+    console.log('[SW] No imports to rewrite in this module');
   }
 
   return rewritten;

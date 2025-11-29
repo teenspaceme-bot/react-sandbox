@@ -19,17 +19,32 @@
     // Listen for messages from parent
     window.addEventListener('message', async (event) => {
       if (event.data.type === 'RUN_CODE') {
-        const { html, files } = event.data;
+        const { html, files, importMap } = event.data;
+
+        // Wait for Service Worker to be ready
+        if ('serviceWorker' in navigator) {
+          await navigator.serviceWorker.ready;
+        }
 
         // Clear existing content
         document.body.innerHTML = '';
 
-        // Send files to Service Worker
+        // Send files and import map to Service Worker
         if (navigator.serviceWorker.controller) {
           navigator.serviceWorker.controller.postMessage({
             type: 'UPDATE_FILES',
             files: files
           });
+
+          if (importMap) {
+            navigator.serviceWorker.controller.postMessage({
+              type: 'UPDATE_IMPORT_MAP',
+              importMap: importMap
+            });
+          }
+
+          // Give SW a moment to process the messages
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
 
         // Parse and inject HTML
