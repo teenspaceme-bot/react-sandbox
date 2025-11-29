@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sandbox Preview</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="app"></div>
+
+  <script>
+    // Listen for messages from parent
+    window.addEventListener('message', async (event) => {
+      if (event.data.type === 'RUN_CODE') {
+        const { html, files } = event.data;
+
+        // Clear existing content
+        document.body.innerHTML = '';
+
+        // Send files to Service Worker
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: 'UPDATE_FILES',
+            files: files
+          });
+        }
+
+        // Parse and inject HTML
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Copy head content (except title)
+        const headNodes = Array.from(doc.head.childNodes);
+        headNodes.forEach(node => {
+          if (node.nodeName !== 'TITLE') {
+            document.head.appendChild(node.cloneNode(true));
+          }
+        });
+
+        // Copy body content
+        document.body.innerHTML = doc.body.innerHTML;
+
+        // Execute scripts
+        const scripts = doc.body.querySelectorAll('script');
+        scripts.forEach(oldScript => {
+          const newScript = document.createElement('script');
+          Array.from(oldScript.attributes).forEach(attr => {
+            newScript.setAttribute(attr.name, attr.value);
+          });
+          newScript.textContent = oldScript.textContent;
+          document.body.appendChild(newScript);
+        });
+
+        // Notify parent
+        window.parent.postMessage({ type: 'CODE_EXECUTED' }, '*');
+      }
+    });
+
+    // Register Service Worker
+    (async function() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/sandbox-sw.js', {
+            scope: '/'
+          });
+
+          await navigator.serviceWorker.ready;
+          console.log('[Sandbox Frame] Service Worker ready');
+
+          // Notify parent that SW is ready
+          window.parent.postMessage({ type: 'SW_READY' }, '*');
+        } catch (error) {
+          console.error('[Sandbox Frame] Service Worker error:', error);
+          window.parent.postMessage({ type: 'SW_ERROR', error: error.message }, '*');
+        }
+      }
+    })();
+  </script>
+</body>
+</html>

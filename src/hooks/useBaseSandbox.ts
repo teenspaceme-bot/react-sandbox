@@ -2,7 +2,7 @@ import { createSignal, createEffect, onMount } from 'solid-js';
 import type { FileType, ImportMapType } from '../types/sandbox';
 import type { Compiler } from '../compilers/types';
 import { FETCH_INTERCEPTOR } from '../utils/templates';
-import { ensureServiceWorkerReady, updateServiceWorkerFiles, getServiceWorkerInitScript } from '../utils/sw-manager';
+import { ensureServiceWorkerReady, updateServiceWorkerFiles } from '../utils/sw-manager';
 
 export interface BaseSandboxConfig {
   initialFiles: FileType[];
@@ -168,10 +168,9 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
       }
     );
 
-    // Inject Service Worker registration and fetch interceptor before any other scripts
+    // Inject fetch interceptor before any other scripts
     const injectedScripts = `
   <script>
-${getServiceWorkerInitScript()}
 ${FETCH_INTERCEPTOR}
   </script>
 `;
@@ -184,7 +183,12 @@ ${FETCH_INTERCEPTOR}
   const runCode = async () => {
     setIsLoading(true);
 
+    // Ensure Service Worker is ready first
+    await ensureServiceWorkerReady();
+
     let html: string;
+    let compiledFiles: Record<string, string> = {};
+
     if (config.compiler.compileAll) {
       try {
         setError('');
@@ -200,26 +204,40 @@ ${FETCH_INTERCEPTOR}
         setIsLoading(false);
         return;
       }
+      compiledFiles = compiled;
       html = generateHTML(compiled, importMap());
     }
-
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
 
     setIframeKey(prev => prev + 1);
 
     setTimeout(() => {
       const iframe = document.getElementById('preview-iframe') as HTMLIFrameElement;
       if (iframe) {
-        const oldSrc = iframe.src;
-        if (oldSrc && oldSrc.startsWith('blob:')) {
-          URL.revokeObjectURL(oldSrc);
-        }
-        iframe.src = url;
+        // Use sandbox-frame.html instead of blob URL
+        iframe.src = '/sandbox-frame.html';
+
         iframe.onload = () => {
-          setIsLoading(false);
+          // Send code to iframe via postMessage
+          iframe.contentWindow?.postMessage({
+            type: 'RUN_CODE',
+            html: html,
+            files: compiledFiles
+          }, '*');
         };
       }
+
+      // Listen for messages from iframe
+      const handleMessage = (event: MessageEvent) => {
+        if (event.data.type === 'CODE_EXECUTED') {
+          setIsLoading(false);
+        } else if (event.data.type === 'SW_READY') {
+          console.log('[Sandbox] iframe Service Worker ready');
+        } else if (event.data.type === 'SW_ERROR') {
+          console.error('[Sandbox] iframe Service Worker error:', event.data.error);
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
     }, 0);
   };
 
