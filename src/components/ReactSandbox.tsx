@@ -437,26 +437,26 @@ export function ReactSandbox() {
     <div class="sandbox-container">
       <div class="sandbox-header">
         <h2>React Sandbox</h2>
-        <button onClick={runCode} class="run-button">▶ Run</button>
+        <div class="header-controls">
+          <button
+            class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
+            onClick={() => setViewMode('code')}
+          >
+            Code
+          </button>
+          <button
+            class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
+            onClick={() => setViewMode('preview')}
+          >
+            Preview
+          </button>
+          <button onClick={runCode} class="run-button">▶ Run</button>
+        </div>
       </div>
 
       <div class="sandbox-content">
         <Show when={viewMode() === 'code'}>
           <div class="file-explorer">
-            <div class="explorer-header">
-              <button
-                class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
-                onClick={() => setViewMode('code')}
-              >
-                Code
-              </button>
-              <button
-                class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
-                onClick={() => setViewMode('preview')}
-              >
-                Preview
-              </button>
-            </div>
             <div class="file-tree">
               <For each={buildFileTree()}>
                 {(node) => renderTreeNode(node, 0)}
@@ -491,20 +491,6 @@ export function ReactSandbox() {
 
         <Show when={viewMode() === 'preview'}>
           <div class="preview-panel preview-fullscreen">
-            <div class="preview-header">
-              <button
-                class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
-                onClick={() => setViewMode('code')}
-              >
-                Code
-              </button>
-              <button
-                class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
-                onClick={() => setViewMode('preview')}
-              >
-                Preview
-              </button>
-            </div>
             <iframe
               id="preview-iframe"
               data-key={iframeKey()}
