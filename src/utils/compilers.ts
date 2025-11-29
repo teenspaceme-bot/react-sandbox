@@ -55,7 +55,12 @@ export function compileVueFile(file: FileType): string {
 
       if (descriptor.scriptSetup) {
         scriptContent = scriptContent
-          .replace(/export default/, 'const __sfc__ =');
+          .replace(/export default/, 'const __sfc__ =')
+          .replace(/defineComponent/, '_defineComponent');
+
+        if (!scriptContent.includes('import')) {
+          code += `import { defineComponent as _defineComponent } from 'vue';\n`;
+        }
       } else {
         scriptContent = scriptContent
           .replace(/export default/, 'const __sfc__ =');
@@ -70,7 +75,8 @@ export function compileVueFile(file: FileType): string {
           id: scopeId,
           scoped: descriptor.styles.some(s => s.scoped),
           compilerOptions: {
-            mode: 'module'
+            mode: 'module',
+            bindingMetadata: compiled.bindings
           }
         });
 
@@ -87,6 +93,7 @@ export function compileVueFile(file: FileType): string {
         code += `__sfc__.__scopeId = '${scopeId}';\n`;
       }
 
+      code += `__sfc__.__file = '${file.name}';\n`;
       code += `export default __sfc__;\n`;
     } else if (descriptor.template) {
       const templateResult = VueCompiler.compileTemplate({
