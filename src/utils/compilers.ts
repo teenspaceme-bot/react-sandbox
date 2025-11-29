@@ -16,6 +16,30 @@ export function compileReactFile(file: FileType): string {
   return file.content;
 }
 
+function compileVueTemplate(
+  descriptor: VueCompiler.SFCDescriptor,
+  file: FileType,
+  scopeId: string,
+  bindings?: VueCompiler.BindingMetadata
+) {
+  const templateResult = VueCompiler.compileTemplate({
+    source: descriptor.template!.content,
+    filename: file.name,
+    id: scopeId,
+    scoped: descriptor.styles.some(s => s.scoped),
+    compilerOptions: {
+      mode: 'module',
+      ...(bindings && { bindingMetadata: bindings })
+    }
+  });
+
+  if (templateResult.errors.length > 0) {
+    console.error('Template compilation errors:', templateResult.errors);
+  }
+
+  return templateResult.code;
+}
+
 export function compileVueFile(file: FileType): string {
   if (file.language !== 'vue') {
     return file.content;
@@ -23,7 +47,6 @@ export function compileVueFile(file: FileType): string {
 
   try {
     const { descriptor } = VueCompiler.parse(file.content, { filename: file.name });
-
     const scopeId = `data-v-${Math.random().toString(36).slice(2, 10)}`;
     let code = '';
 
@@ -69,22 +92,8 @@ export function compileVueFile(file: FileType): string {
       code += scriptContent;
 
       if (descriptor.template) {
-        const templateResult = VueCompiler.compileTemplate({
-          source: descriptor.template.content,
-          filename: file.name,
-          id: scopeId,
-          scoped: descriptor.styles.some(s => s.scoped),
-          compilerOptions: {
-            mode: 'module',
-            bindingMetadata: compiled.bindings
-          }
-        });
-
-        if (templateResult.errors.length > 0) {
-          console.error('Template compilation errors:', templateResult.errors);
-        }
-
-        code += `\n${templateResult.code}\n`;
+        const templateCode = compileVueTemplate(descriptor, file, scopeId, compiled.bindings);
+        code += `\n${templateCode}\n`;
         code += `__sfc__.render = render;\n`;
       }
 
@@ -96,21 +105,8 @@ export function compileVueFile(file: FileType): string {
       code += `__sfc__.__file = '${file.name}';\n`;
       code += `export default __sfc__;\n`;
     } else if (descriptor.template) {
-      const templateResult = VueCompiler.compileTemplate({
-        source: descriptor.template.content,
-        filename: file.name,
-        id: scopeId,
-        scoped: descriptor.styles.some(s => s.scoped),
-        compilerOptions: {
-          mode: 'module'
-        }
-      });
-
-      if (templateResult.errors.length > 0) {
-        console.error('Template compilation errors:', templateResult.errors);
-      }
-
-      code += `${templateResult.code}\n`;
+      const templateCode = compileVueTemplate(descriptor, file, scopeId);
+      code += `${templateCode}\n`;
 
       const hasScoped = descriptor.styles.some(s => s.scoped);
       code += `const __sfc__ = { render };\n`;
