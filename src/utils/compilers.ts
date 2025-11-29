@@ -42,18 +42,24 @@ document.head.appendChild(style);
   if (isSetup) {
     const propsMatch = script.match(/(?:const\s+\w+\s+=\s+)?defineProps\(\{([^}]+)\}\)/);
     const propsContent = propsMatch ? propsMatch[1].trim().replace(/\s+/g, ' ') : '';
-    const scriptWithoutDefineProps = script.replace(/(?:const\s+\w+\s+=\s+)?defineProps\(\{[^}]+\}\);?\s*/g, '');
 
-    code += `
-import { ref, reactive, computed, watch, onMounted } from 'vue';
+    let scriptWithoutDefineProps = script.replace(/(?:const\s+\w+\s+=\s+)?defineProps\(\{[^}]+\}\);?\s*/g, '');
+    scriptWithoutDefineProps = scriptWithoutDefineProps.replace(/import\s+\{[^}]+\}\s+from\s+['"]vue['"];?\s*/g, '');
 
-export default {
+    const vueImportsMatch = script.match(/import\s+\{([^}]+)\}\s+from\s+['"]vue['"]/);
+    const vueImports = vueImportsMatch ? vueImportsMatch[1].split(',').map(s => s.trim()).join(', ') : '';
+
+    const hasImports = vueImports || scriptWithoutDefineProps.trim();
+
+    code += hasImports ? `import { ${vueImports || 'ref, reactive, computed, watch, onMounted'} } from 'vue';\n\n` : '';
+
+    code += `export default {
   ${propsContent ? `props: { ${propsContent} },` : ''}
-  setup(props) {
+  ${scriptWithoutDefineProps.trim() ? `setup(props) {
     ${scriptWithoutDefineProps}
     return { ${extractSetupReturns(scriptWithoutDefineProps)} };
-  },
-  template: \`${template.replace(/`/g, '\\`')}\`
+  },` : ''}
+  template: \`${template.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`
 };
 `;
   } else if (script) {
