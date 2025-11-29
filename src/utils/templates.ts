@@ -1,5 +1,92 @@
 import type { ProjectTemplate } from '../types/sandbox';
 
+export const FETCH_INTERCEPTOR = `
+// Fetch & XHR Interceptor - Auto proxy external requests
+(function() {
+  const API_BASE = window.location.origin;
+  const PROXY_ENDPOINT = '/api/proxy';
+
+  // Check if URL is external
+  function isExternalURL(url) {
+    if (url.startsWith('/')) return false;
+    if (url.startsWith(API_BASE)) return false;
+    if (url.startsWith('blob:')) return false;
+    if (url.startsWith('data:')) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  }
+
+  // Intercept fetch
+  const originalFetch = window.fetch;
+  window.fetch = function(url, options = {}) {
+    if (typeof url === 'string' && isExternalURL(url)) {
+      console.log('[Proxy] Intercepting fetch:', url);
+      const proxyUrl = \`\${API_BASE}\${PROXY_ENDPOINT}?url=\${encodeURIComponent(url)}\`;
+      return originalFetch(proxyUrl, {
+        ...options,
+        credentials: 'include'
+      });
+    }
+
+    // Internal requests - ensure credentials
+    if (typeof url === 'string' && !url.startsWith('blob:') && !url.startsWith('data:')) {
+      return originalFetch(url, {
+        ...options,
+        credentials: 'include'
+      });
+    }
+
+    return originalFetch(url, options);
+  };
+
+  // Intercept XMLHttpRequest
+  const OriginalXHR = window.XMLHttpRequest;
+  window.XMLHttpRequest = function() {
+    const xhr = new OriginalXHR();
+    const originalOpen = xhr.open;
+
+    xhr.open = function(method, url, ...args) {
+      if (typeof url === 'string' && isExternalURL(url)) {
+        console.log('[Proxy] Intercepting XHR:', url);
+        const proxyUrl = \`\${API_BASE}\${PROXY_ENDPOINT}?url=\${encodeURIComponent(url)}\`;
+        xhr.withCredentials = true;
+        return originalOpen.call(this, method, proxyUrl, ...args);
+      }
+
+      // Internal requests
+      if (typeof url === 'string' && !url.startsWith('blob:') && !url.startsWith('data:')) {
+        xhr.withCredentials = true;
+      }
+
+      return originalOpen.call(this, method, url, ...args);
+    };
+
+    return xhr;
+  };
+
+  console.log('[Proxy] Request interceptor installed');
+})();
+`;
+
+export const API_HELPER = `
+// API Helper for cross-origin requests with cookie support
+const API_BASE = window.location.origin;
+
+export async function fetchAPI(endpoint, options = {}) {
+  const url = endpoint.startsWith('http')
+    ? \`\${API_BASE}/api/proxy?url=\${encodeURIComponent(endpoint)}\`
+    : \`\${API_BASE}\${endpoint}\`;
+
+  return fetch(url, {
+    ...options,
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+}
+`;
+
 export const reactTemplate: ProjectTemplate = {
   framework: 'react',
   files: [

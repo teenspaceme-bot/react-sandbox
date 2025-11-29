@@ -1,6 +1,8 @@
-import { createSignal, createEffect } from 'solid-js';
+import { createSignal, createEffect, onMount } from 'solid-js';
 import type { FileType, ImportMapType } from '../types/sandbox';
 import type { Compiler } from '../compilers/types';
+import { FETCH_INTERCEPTOR } from '../utils/templates';
+import { ensureServiceWorkerReady, updateServiceWorkerFiles, getServiceWorkerInitScript } from '../utils/sw-manager';
 
 export interface BaseSandboxConfig {
   initialFiles: FileType[];
@@ -18,6 +20,13 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
   const [isLoading, setIsLoading] = createSignal(false);
   const [blobUrls, setBlobUrls] = createSignal<string[]>([]);
+
+  // Initialize Service Worker on mount
+  onMount(() => {
+    ensureServiceWorkerReady().catch(err => {
+      console.error('[Sandbox] Failed to initialize Service Worker:', err);
+    });
+  });
 
   createEffect(() => {
     setFiles(config.initialFiles);
@@ -97,26 +106,8 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     blobUrls().forEach(url => URL.revokeObjectURL(url));
     setBlobUrls([]);
 
-    const moduleUrls: Record<string, string> = {};
-
-    Object.entries(compiledFiles).forEach(([name, code]) => {
-      if (!name.endsWith('.html')) {
-        const transformedCode = code.replace(/from\s+(['"])\.\/([^'"]*)['"]/g, "from $1$2$1");
-        const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
-
-        moduleUrls[name] = dataUrl;
-
-        const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-        moduleUrls[nameWithoutExt] = dataUrl;
-
-        if (name.startsWith('src/')) {
-          const nameWithoutSrc = name.replace(/^src\//, '');
-          moduleUrls[nameWithoutSrc] = dataUrl;
-          const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-          moduleUrls[nameWithoutSrcExt] = dataUrl;
-        }
-      }
-    });
+    // Send compiled files to Service Worker
+    updateServiceWorkerFiles(compiledFiles);
 
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
@@ -134,6 +125,21 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     } else {
       existingImports = importMap.imports;
     }
+
+    // Generate import map with Service Worker URLs
+    const moduleUrls: Record<string, string> = {};
+    const swBaseUrl = `${window.location.origin}/sandbox-sw.js?sandbox-module=`;
+
+    Object.entries(compiledFiles).forEach(([name]) => {
+      if (!name.endsWith('.html')) {
+        const modulePath = name.replace(/^src\//, './');
+        moduleUrls[modulePath] = `${swBaseUrl}${encodeURIComponent(modulePath)}`;
+
+        // Also map without extension
+        const withoutExt = modulePath.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
+        moduleUrls[withoutExt] = `${swBaseUrl}${encodeURIComponent(modulePath)}`;
+      }
+    });
 
     const customImportMap = {
       imports: {
@@ -156,15 +162,21 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
 
     html = html.replace(
       /<script\s+type="module"\s+src="([^"]+)"><\/script>/g,
-      (match, src) => {
-        const cleanSrc = src.replace(/^\.\//, '');
-        const moduleUrl = moduleUrls[cleanSrc];
-        if (moduleUrl) {
-          return `<script type="module" src="${moduleUrl}"></script>`;
-        }
-        return match;
+      (_match, src) => {
+        const modulePath = src.replace(/^\.\//, './');
+        return `<script type="module" src="${swBaseUrl}${encodeURIComponent(modulePath)}"></script>`;
       }
     );
+
+    // Inject Service Worker registration and fetch interceptor before any other scripts
+    const injectedScripts = `
+  <script>
+${getServiceWorkerInitScript()}
+${FETCH_INTERCEPTOR}
+  </script>
+`;
+
+    html = html.replace(/<\/head>/i, `${injectedScripts}</head>`);
 
     return html;
   };
