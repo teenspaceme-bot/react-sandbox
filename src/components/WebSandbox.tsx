@@ -1,145 +1,8 @@
 import { createSignal, createEffect, For, Show } from 'solid-js';
-import { transform } from '@babel/standalone';
-import type { FileType, ImportMapType } from '../types/sandbox';
-import './ReactSandbox.css';
-
-const defaultFiles: FileType[] = [
-  {
-    name: 'index.html',
-    content: `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <script type="importmap">
-    {
-      "imports": {
-        "react": "https://esm.sh/react@18.2.0",
-        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-        "react/": "https://esm.sh/react@18.2.0/",
-        "lucide-react": "https://esm.sh/lucide-react@0.330.0",
-        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/"
-      }
-    }
-  </script>
-  <style>
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, sans-serif;
-    }
-    #root {
-      min-height: 100vh;
-    }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script type="module" src="./src/index.jsx"></script>
-</body>
-</html>`,
-    language: 'html'
-  },
-  {
-    name: 'src/index.jsx',
-    content: `import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
-
-const rootElement = document.getElementById('root');
-if (!rootElement) {
-  throw new Error("Could not find root element to mount to");
-}
-
-const root = ReactDOM.createRoot(rootElement);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);`,
-    language: 'jsx'
-  },
-  {
-    name: 'src/App.jsx',
-    content: `import React, { useState } from 'react';
-import { Button } from './components/Button';
-import { Card } from './components/Card';
-
-function App() {
-  const [count, setCount] = useState(0);
-
-  return (
-    <div style={{ padding: '20px', fontFamily: 'system-ui' }}>
-      <h1>React Sandbox Demo</h1>
-      <Card title="Counter Example">
-        <p>Count: {count}</p>
-        <Button onClick={() => setCount(count + 1)}>
-          Increment
-        </Button>
-        <Button onClick={() => setCount(count - 1)}>
-          Decrement
-        </Button>
-      </Card>
-    </div>
-  );
-}
-
-export default App;`,
-    language: 'jsx'
-  },
-  {
-    name: 'src/components/Button.jsx',
-    content: `import React from 'react';
-
-export function Button({ children, onClick }) {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        padding: '10px 20px',
-        fontSize: '16px',
-        backgroundColor: '#007bff',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        marginRight: '10px'
-      }}
-    >
-      {children}
-    </button>
-  );
-}`,
-    language: 'jsx'
-  },
-  {
-    name: 'src/components/Card.jsx',
-    content: `import React from 'react';
-
-export function Card({ title, children }) {
-  return (
-    <div style={{
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      padding: '20px',
-      backgroundColor: '#f9f9f9',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      maxWidth: '500px'
-    }}>
-      {title && <h2 style={{ marginTop: 0, color: '#333' }}>{title}</h2>}
-      <div>{children}</div>
-    </div>
-  );
-}`,
-    language: 'jsx'
-  }
-];
-
-const defaultImportMap: ImportMapType = {
-  imports: {
-    'react': 'https://esm.sh/react@18.2.0',
-    'react-dom': 'https://esm.sh/react-dom@18.2.0',
-    'react-dom/client': 'https://esm.sh/react-dom@18.2.0/client'
-  }
-};
+import type { FileType, ImportMapType, FrameworkType } from '../types/sandbox';
+import { compileReactFile, compileVueFile } from '../utils/compilers';
+import { reactTemplate, vueTemplate } from '../utils/templates';
+import './WebSandbox.css';
 
 interface FolderNode {
   name: string;
@@ -158,10 +21,11 @@ interface FileNode {
 
 type TreeNode = FolderNode | FileNode;
 
-export function ReactSandbox() {
-  const [files, setFiles] = createSignal<FileType[]>(defaultFiles);
+export function WebSandbox() {
+  const [framework, setFramework] = createSignal<FrameworkType>('react');
+  const [files, setFiles] = createSignal<FileType[]>(reactTemplate.files);
   const [activeFileIndex, setActiveFileIndex] = createSignal(0);
-  const [importMap, setImportMap] = createSignal<ImportMapType>(defaultImportMap);
+  const [importMap, setImportMap] = createSignal<ImportMapType>(reactTemplate.importMap);
   const [error, setError] = createSignal<string>('');
   const [iframeKey, setIframeKey] = createSignal(0);
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set(['root', 'src', 'src/components']));
@@ -169,6 +33,17 @@ export function ReactSandbox() {
   const [isLoading, setIsLoading] = createSignal(false);
 
   const activeFile = () => files()[activeFileIndex()];
+
+  const switchFramework = (newFramework: FrameworkType) => {
+    if (confirm(`Switch to ${newFramework.toUpperCase()}? This will reset your current work.`)) {
+      setFramework(newFramework);
+      const template = newFramework === 'react' ? reactTemplate : vueTemplate;
+      setFiles(template.files);
+      setImportMap(template.importMap);
+      setActiveFileIndex(0);
+      setError('');
+    }
+  };
 
   const updateFileContent = (content: string) => {
     const index = activeFileIndex();
@@ -178,11 +53,22 @@ export function ReactSandbox() {
   };
 
   const addFile = () => {
-    const name = prompt('Enter file name (e.g., Component.jsx):');
+    const name = prompt(
+      framework() === 'react'
+        ? 'Enter file name (e.g., Component.jsx):'
+        : 'Enter file name (e.g., Component.vue):'
+    );
     if (name) {
-      const language = name.endsWith('.tsx') ? 'tsx' :
-                      name.endsWith('.ts') ? 'typescript' :
-                      name.endsWith('.jsx') ? 'jsx' : 'javascript';
+      let language: FileType['language'] = 'javascript';
+
+      if (framework() === 'react') {
+        language = name.endsWith('.tsx') ? 'tsx' :
+                  name.endsWith('.ts') ? 'typescript' :
+                  name.endsWith('.jsx') ? 'jsx' : 'javascript';
+      } else {
+        language = name.endsWith('.vue') ? 'vue' : 'javascript';
+      }
+
       setFiles([...files(), { name, content: '', language }]);
       setActiveFileIndex(files().length - 1);
     }
@@ -313,14 +199,10 @@ export function ReactSandbox() {
 
       files().forEach(file => {
         try {
-          const isJSXOrTSX = file.language === 'jsx' || file.language === 'tsx';
-
-          if (isJSXOrTSX) {
-            const result = transform(file.content, {
-              presets: [['react', { runtime: 'classic' }]],
-              filename: file.name
-            });
-            compiledFiles[file.name] = result.code || '';
+          if (framework() === 'react') {
+            compiledFiles[file.name] = compileReactFile(file);
+          } else if (framework() === 'vue') {
+            compiledFiles[file.name] = compileVueFile(file);
           } else {
             compiledFiles[file.name] = file.content;
           }
@@ -374,13 +256,13 @@ export function ReactSandbox() {
 
       dataUrls[name] = dataUrl;
 
-      const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts)$/, '');
+      const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
       dataUrls[nameWithoutExt] = dataUrl;
 
       if (name.startsWith('src/')) {
         const nameWithoutSrc = name.replace(/^src\//, '');
         dataUrls[nameWithoutSrc] = dataUrl;
-        const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts)$/, '');
+        const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
         dataUrls[nameWithoutSrcExt] = dataUrl;
       }
     });
@@ -444,6 +326,18 @@ export function ReactSandbox() {
     <div class="sandbox-container">
       <div class="sandbox-header">
         <div class="header-left">
+          <button
+            class={`view-toggle-button ${framework() === 'react' ? 'active' : ''}`}
+            onClick={() => switchFramework('react')}
+          >
+            React
+          </button>
+          <button
+            class={`view-toggle-button ${framework() === 'vue' ? 'active' : ''}`}
+            onClick={() => switchFramework('vue')}
+          >
+            Vue
+          </button>
           <button
             class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
             onClick={() => setViewMode('code')}

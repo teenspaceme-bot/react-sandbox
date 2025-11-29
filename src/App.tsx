@@ -1,8 +1,8 @@
-import { ReactSandbox } from './components/ReactSandbox'
+import { WebSandbox } from './components/WebSandbox'
 import './App.css'
 
 function App() {
-  return <ReactSandbox />
+  return <WebSandbox />
 }
 
 export default App

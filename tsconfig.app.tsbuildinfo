@@ -1,1 +1,1 @@
-{"root":["./src/App.tsx","./src/index.tsx","./src/vite-env.d.ts","./src/components/ReactSandbox.tsx","./src/types/sandbox.ts"],"version":"5.9.3"}
+{"root":["./src/App.tsx","./src/index.tsx","./src/vite-env.d.ts","./src/components/WebSandbox.tsx","./src/types/sandbox.ts","./src/utils/compilers.ts","./src/utils/templates.ts"],"version":"5.9.3"}
