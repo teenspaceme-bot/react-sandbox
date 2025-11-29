@@ -7,5 +7,13 @@ export default defineConfig({
     'process.env': {},
     'process.platform': JSON.stringify('browser'),
     'process.version': JSON.stringify(''),
+  },
+  resolve: {
+    alias: {
+      assert: 'assert'
+    }
+  },
+  optimizeDeps: {
+    include: ['assert']
   }
 })
