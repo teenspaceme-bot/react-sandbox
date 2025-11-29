@@ -436,7 +436,6 @@ export function ReactSandbox() {
   return (
     <div class="sandbox-container">
       <div class="sandbox-header">
-        <h2>React Sandbox</h2>
         <div class="header-controls">
           <button
             class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
@@ -450,8 +449,11 @@ export function ReactSandbox() {
           >
             Preview
           </button>
-          <button onClick={runCode} class="run-button">▶ Run</button>
+          <Show when={viewMode() === 'code'}>
+            <span class="current-file">📄 {activeFile().name}</span>
+          </Show>
         </div>
+        <button onClick={runCode} class="run-button">▶ Run</button>
       </div>
 
       <div class="sandbox-content">
@@ -470,10 +472,6 @@ export function ReactSandbox() {
 
         <Show when={viewMode() === 'code'}>
           <div class="editor-panel">
-            <div class="editor-header">
-              <span class="current-file">📄 {activeFile().name}</span>
-            </div>
-
             <textarea
               class="code-editor"
               value={activeFile().content}

@@ -10,21 +10,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 20px;
-  background: #252526;
+  padding: 10px 16px;
+  background: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
-}
-
-.sandbox-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
 }
 
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .run-button {
@@ -198,19 +192,9 @@
   min-width: 0;
 }
 
-.editor-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: #2d2d2d;
-  border-bottom: 1px solid #3c3c3c;
-  font-size: 13px;
-}
-
 .current-file {
   color: #d4d4d4;
-  font-weight: 500;
+  font-size: 13px;
 }
 
 .code-editor {
