@@ -54,6 +54,15 @@ export function updateServiceWorkerFiles(files: Record<string, string>): void {
   }
 }
 
+export function updateServiceWorkerImportMap(importMap: any): void {
+  if (navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'UPDATE_IMPORT_MAP',
+      importMap
+    });
+  }
+}
+
 export function getServiceWorkerInitScript(): string {
   return `
 // Service Worker initialization for module loading

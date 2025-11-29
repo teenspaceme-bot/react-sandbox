@@ -2,7 +2,7 @@ import { createSignal, createEffect, onMount } from 'solid-js';
 import type { FileType, ImportMapType } from '../types/sandbox';
 import type { Compiler } from '../compilers/types';
 import { FETCH_INTERCEPTOR } from '../utils/templates';
-import { ensureServiceWorkerReady, updateServiceWorkerFiles } from '../utils/sw-manager';
+import { ensureServiceWorkerReady, updateServiceWorkerFiles, updateServiceWorkerImportMap } from '../utils/sw-manager';
 
 export interface BaseSandboxConfig {
   initialFiles: FileType[];
@@ -106,8 +106,9 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     blobUrls().forEach(url => URL.revokeObjectURL(url));
     setBlobUrls([]);
 
-    // Send compiled files to Service Worker
+    // Send compiled files and import map to Service Worker
     updateServiceWorkerFiles(compiledFiles);
+    updateServiceWorkerImportMap(importMap);
 
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
