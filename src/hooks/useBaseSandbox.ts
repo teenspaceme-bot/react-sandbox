@@ -1,6 +1,7 @@
 import { createSignal, createEffect } from 'solid-js';
 import type { FileType, ImportMapType } from '../types/sandbox';
 import type { Compiler } from '../compilers/types';
+import { FETCH_INTERCEPTOR } from '../utils/templates';
 
 export interface BaseSandboxConfig {
   initialFiles: FileType[];
@@ -164,6 +165,12 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
         }
         return match;
       }
+    );
+
+    // Inject fetch/xhr interceptor before any other scripts
+    html = html.replace(
+      /<\/head>/i,
+      `  <script>\n${FETCH_INTERCEPTOR}\n  </script>\n</head>`
     );
 
     return html;
