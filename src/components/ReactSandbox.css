@@ -52,13 +52,13 @@
 }
 
 .explorer-header {
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 600;
-  color: #858585;
-  background: #252526;
+  display: flex;
+  gap: 4px;
+  padding: 10px 16px;
+  background: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
-  letter-spacing: 0.5px;
+  height: 41px;
+  box-sizing: border-box;
 }
 
 .file-tree {
@@ -205,10 +205,13 @@
 .editor-header {
   display: flex;
   align-items: center;
+  gap: 8px;
   padding: 10px 16px;
   background: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
   font-size: 13px;
+  height: 41px;
+  box-sizing: border-box;
 }
 
 .current-file {
@@ -251,11 +254,46 @@
 }
 
 .preview-header {
+  display: flex;
+  gap: 4px;
   padding: 10px 16px;
   background: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
   font-size: 13px;
   font-weight: 500;
+  height: 41px;
+  box-sizing: border-box;
+}
+
+.view-toggle-button {
+  padding: 4px 16px;
+  background: transparent;
+  color: #858585;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  font-weight: 500;
+}
+
+.view-toggle-button:hover {
+  background: #37373d;
+  color: #d4d4d4;
+}
+
+.view-toggle-button.active {
+  background: #0e639c;
+  color: #ffffff;
+}
+
+.preview-panel.preview-fullscreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
 }
 
 .preview-iframe {

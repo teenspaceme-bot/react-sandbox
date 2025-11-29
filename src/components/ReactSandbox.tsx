@@ -165,6 +165,7 @@ export function ReactSandbox() {
   const [error, setError] = createSignal<string>('');
   const [iframeKey, setIframeKey] = createSignal(0);
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set(['root', 'src', 'src/components']));
+  const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
 
   const activeFile = () => files()[activeFileIndex()];
 
@@ -440,39 +441,81 @@ export function ReactSandbox() {
       </div>
 
       <div class="sandbox-content">
-        <div class="file-explorer">
-          <div class="explorer-header">FILES</div>
-          <div class="file-tree">
-            <For each={buildFileTree()}>
-              {(node) => renderTreeNode(node, 0)}
-            </For>
-          </div>
-          <button class="add-file-button" onClick={addFile}>
-            <span class="add-icon">+</span> New File
-          </button>
-        </div>
-
-        <div class="editor-panel">
-          <div class="editor-header">
-            <span class="current-file">📄 {activeFile().name}</span>
-          </div>
-
-          <textarea
-            class="code-editor"
-            value={activeFile().content}
-            onInput={(e) => updateFileContent(e.currentTarget.value)}
-            spellcheck={false}
-          />
-
-          <Show when={error()}>
-            <div class="error-message">
-              <strong>Error:</strong> {error()}
+        <Show when={viewMode() === 'code'}>
+          <div class="file-explorer">
+            <div class="explorer-header">
+              <button
+                class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
+                onClick={() => setViewMode('code')}
+              >
+                Code
+              </button>
+              <button
+                class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
+                onClick={() => setViewMode('preview')}
+              >
+                Preview
+              </button>
             </div>
-          </Show>
-        </div>
+            <div class="file-tree">
+              <For each={buildFileTree()}>
+                {(node) => renderTreeNode(node, 0)}
+              </For>
+            </div>
+            <button class="add-file-button" onClick={addFile}>
+              <span class="add-icon">+</span> New File
+            </button>
+          </div>
+        </Show>
 
-        <div class="preview-panel">
-          <div class="preview-header">Preview</div>
+        <Show when={viewMode() === 'code'}>
+          <div class="editor-panel">
+            <div class="editor-header">
+              <button
+                class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
+                onClick={() => setViewMode('code')}
+              >
+                Code
+              </button>
+              <button
+                class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
+                onClick={() => setViewMode('preview')}
+              >
+                Preview
+              </button>
+              <span class="current-file">📄 {activeFile().name}</span>
+            </div>
+
+            <textarea
+              class="code-editor"
+              value={activeFile().content}
+              onInput={(e) => updateFileContent(e.currentTarget.value)}
+              spellcheck={false}
+            />
+
+            <Show when={error()}>
+              <div class="error-message">
+                <strong>Error:</strong> {error()}
+              </div>
+            </Show>
+          </div>
+        </Show>
+
+        <div class="preview-panel" classList={{ 'preview-fullscreen': viewMode() === 'preview' }}>
+          <div class="preview-header">
+            <button
+              class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
+              onClick={() => setViewMode('code')}
+            >
+              Code
+            </button>
+            <button
+              class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
+              onClick={() => setViewMode('preview')}
+            >
+              Preview
+            </button>
+          </div>
           <iframe
             id="preview-iframe"
             data-key={iframeKey()}
