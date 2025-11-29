@@ -255,6 +255,7 @@
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
   font-weight: 500;
+  height: 32px;
 }
 
 .view-toggle-button:hover {
