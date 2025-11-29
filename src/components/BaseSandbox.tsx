@@ -218,7 +218,7 @@ export function BaseSandbox(props: BaseSandboxProps) {
               id="preview-iframe"
               data-key={props.iframeKey()}
               class="preview-iframe"
-              sandbox="allow-scripts allow-modals"
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
             />
           </div>
         </Show>
