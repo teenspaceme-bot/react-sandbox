@@ -43,21 +43,36 @@ document.head.appendChild(style);
     const propsMatch = script.match(/(?:const\s+\w+\s+=\s+)?defineProps\(\{([^}]+)\}\)/);
     const propsContent = propsMatch ? propsMatch[1].trim().replace(/\s+/g, ' ') : '';
 
-    let scriptWithoutDefineProps = script.replace(/(?:const\s+\w+\s+=\s+)?defineProps\(\{[^}]+\}\);?\s*/g, '');
-    scriptWithoutDefineProps = scriptWithoutDefineProps.replace(/import\s+\{[^}]+\}\s+from\s+['"]vue['"];?\s*/g, '');
-
     const vueImportsMatch = script.match(/import\s+\{([^}]+)\}\s+from\s+['"]vue['"]/);
     const vueImports = vueImportsMatch ? vueImportsMatch[1].split(',').map(s => s.trim()).join(', ') : '';
 
-    const hasImports = vueImports || scriptWithoutDefineProps.trim();
+    const componentImports: string[] = [];
+    const componentImportMatches = script.matchAll(/import\s+(\w+)\s+from\s+['"]\.\/.+?['"]/g);
+    for (const match of componentImportMatches) {
+      componentImports.push(match[0]);
+    }
 
-    code += hasImports ? `import { ${vueImports || 'ref, reactive, computed, watch, onMounted'} } from 'vue';\n\n` : '';
+    let scriptWithoutDefineProps = script.replace(/(?:const\s+\w+\s+=\s+)?defineProps\(\{[^}]+\}\);?\s*/g, '');
+    scriptWithoutDefineProps = scriptWithoutDefineProps.replace(/import\s+\{[^}]+\}\s+from\s+['"]vue['"];?\s*/g, '');
+    scriptWithoutDefineProps = scriptWithoutDefineProps.replace(/import\s+\w+\s+from\s+['"]\.\/.+?['"];?\s*/g, '');
+
+    const hasVueImports = vueImports || scriptWithoutDefineProps.trim();
+    const allImports = [
+      hasVueImports ? `import { ${vueImports || 'ref, reactive, computed, watch, onMounted'} } from 'vue';` : '',
+      ...componentImports
+    ].filter(Boolean).join('\n');
+
+    if (allImports) {
+      code += allImports + '\n\n';
+    }
+
+    const setupReturns = extractSetupReturns(scriptWithoutDefineProps, componentImports);
 
     code += `export default {
   ${propsContent ? `props: { ${propsContent} },` : ''}
-  ${scriptWithoutDefineProps.trim() ? `setup(props) {
+  ${scriptWithoutDefineProps.trim() || componentImports.length > 0 ? `setup(props) {
     ${scriptWithoutDefineProps}
-    return { ${extractSetupReturns(scriptWithoutDefineProps)} };
+    return { ${setupReturns} };
   },` : ''}
   template: \`${template.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`
 };
@@ -83,11 +98,18 @@ export default {
   return code;
 }
 
-function extractSetupReturns(script: string): string {
+function extractSetupReturns(script: string, componentImports: string[]): string {
   const constMatches = script.match(/(?:const|let)\s+(\w+)/g);
   const functionMatches = script.match(/(?:function|const|let)\s+(\w+)\s*(?:=\s*\(|=\s*function|\()/g);
 
   const variables = new Set<string>();
+
+  componentImports.forEach(importStatement => {
+    const match = importStatement.match(/import\s+(\w+)\s+from/);
+    if (match) {
+      variables.add(match[1]);
+    }
+  });
 
   if (constMatches) {
     constMatches.forEach(m => {
