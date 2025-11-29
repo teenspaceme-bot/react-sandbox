@@ -47,20 +47,40 @@ export function compileVueFile(file: FileType): string {
 
     if (descriptor.scriptSetup || descriptor.script) {
       const compiled = VueCompiler.compileScript(descriptor, {
-        id: scopeId
+        id: scopeId,
+        inlineTemplate: false
       });
 
-      const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
+      let scriptContent = compiled.content;
 
-      let scriptContent = compiled.content
-        .replace(/setup\(__props, \{ expose: __expose \}\)/, 'setup()')
-        .replace(/__expose\(\);?\s*\n/, '')
-        .replace(/const __returned__ = \{([^}]+)\}/, 'return { $1 }')
-        .replace(/Object\.defineProperty\(__returned__[^\n]+\n/, '')
-        .replace(/return __returned__/, '');
+      if (descriptor.scriptSetup) {
+        scriptContent = scriptContent
+          .replace(/export default/, 'const __sfc__ =');
+      } else {
+        scriptContent = scriptContent
+          .replace(/export default/, 'const __sfc__ =');
+      }
 
-      code += scriptContent.replace(/export default/, 'const __sfc__ =');
-      code += `\n__sfc__.template = \`${template}\`;\n`;
+      code += scriptContent;
+
+      if (descriptor.template) {
+        const templateResult = VueCompiler.compileTemplate({
+          source: descriptor.template.content,
+          filename: file.name,
+          id: scopeId,
+          scoped: descriptor.styles.some(s => s.scoped),
+          compilerOptions: {
+            mode: 'module'
+          }
+        });
+
+        if (templateResult.errors.length > 0) {
+          console.error('Template compilation errors:', templateResult.errors);
+        }
+
+        code += `\n${templateResult.code}\n`;
+        code += `__sfc__.render = render;\n`;
+      }
 
       const hasScoped = descriptor.styles.some(s => s.scoped);
       if (hasScoped) {
@@ -69,9 +89,24 @@ export function compileVueFile(file: FileType): string {
 
       code += `export default __sfc__;\n`;
     } else if (descriptor.template) {
-      const template = descriptor.template.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      const templateResult = VueCompiler.compileTemplate({
+        source: descriptor.template.content,
+        filename: file.name,
+        id: scopeId,
+        scoped: descriptor.styles.some(s => s.scoped),
+        compilerOptions: {
+          mode: 'module'
+        }
+      });
+
+      if (templateResult.errors.length > 0) {
+        console.error('Template compilation errors:', templateResult.errors);
+      }
+
+      code += `${templateResult.code}\n`;
+
       const hasScoped = descriptor.styles.some(s => s.scoped);
-      code += `const __sfc__ = { template: \`${template}\` };\n`;
+      code += `const __sfc__ = { render };\n`;
       if (hasScoped) {
         code += `__sfc__.__scopeId = '${scopeId}';\n`;
       }
