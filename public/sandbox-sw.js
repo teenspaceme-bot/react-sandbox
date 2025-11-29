@@ -17,7 +17,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
   // Only handle requests for our virtual file system
-  if (url.searchParams.has('sandbox-module')) {
+  if (url.pathname.startsWith('/__sandbox_module__/')) {
     event.respondWith(handleModuleRequest(url));
     return;
   }
@@ -27,7 +27,7 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function handleModuleRequest(url) {
-  const modulePath = url.searchParams.get('sandbox-module');
+  const modulePath = decodeURIComponent(url.pathname.replace('/__sandbox_module__/', ''));
 
   console.log('[SW] Module requested:', modulePath);
 
@@ -37,8 +37,8 @@ async function handleModuleRequest(url) {
     modulePath.replace(/^\.\//, ''),
     `src/${modulePath}`,
     `src/${modulePath.replace(/^\.\//, '')}`,
-    modulePath.replace(/\.(jsx|tsx|ts|vue)$/, ''),
-    modulePath.replace(/^\.\//, '').replace(/\.(jsx|tsx|ts|vue)$/, '')
+    modulePath.replace(/\.(jsx|tsx|js|ts|vue)$/, ''),
+    modulePath.replace(/^\.\//, '').replace(/\.(jsx|tsx|js|ts|vue)$/, '')
   ];
 
   for (const path of possiblePaths) {

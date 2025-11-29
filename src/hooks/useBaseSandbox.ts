@@ -128,7 +128,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
 
     // Generate import map with Service Worker URLs
     const moduleUrls: Record<string, string> = {};
-    const swBaseUrl = `${window.location.origin}/sandbox-sw.js?sandbox-module=`;
+    const swBaseUrl = `${window.location.origin}/__sandbox_module__/`;
 
     Object.entries(compiledFiles).forEach(([name]) => {
       if (!name.endsWith('.html')) {
