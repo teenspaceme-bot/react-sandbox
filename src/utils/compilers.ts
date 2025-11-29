@@ -31,14 +31,24 @@ export function compileVueFile(file: FileType): string {
       code += `const style = document.createElement('style');\nstyle.textContent = \`${style}\`;\ndocument.head.appendChild(style);\n\n`;
     }
 
-    const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
+    if (descriptor.scriptSetup || descriptor.script) {
+      const compiled = VueCompiler.compileScript(descriptor, {
+        id: file.name
+      });
 
-    if (descriptor.scriptSetup) {
-      const scriptContent = descriptor.scriptSetup.content;
-      code += `${scriptContent}\n\nexport default { setup() { return { ${extractExports(scriptContent)} } }, template: \`${template}\` };\n`;
-    } else if (descriptor.script) {
-      code += `${descriptor.script.content}\n\nexport default { ...(__default__ || {}), template: \`${template}\` };\n`;
+      const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
+
+      let scriptContent = compiled.content
+        .replace(/setup\(__props, \{ expose: __expose \}\)/, 'setup()')
+        .replace(/__expose\(\);?\s*\n/, '')
+        .replace(/const __returned__ = \{([^}]+)\}/, 'return { $1 }')
+        .replace(/Object\.defineProperty\(__returned__[^\n]+\n/, '')
+        .replace(/return __returned__/, '');
+
+      code += scriptContent.replace(/export default/, 'const __sfc__ =');
+      code += `\n__sfc__.template = \`${template}\`;\nexport default __sfc__;\n`;
     } else if (descriptor.template) {
+      const template = descriptor.template.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
       code += `export default { template: \`${template}\` };\n`;
     }
 
@@ -46,23 +56,6 @@ export function compileVueFile(file: FileType): string {
   } catch (error: any) {
     throw new Error(`Failed to compile ${file.name}: ${error.message}`);
   }
-}
-
-function extractExports(scriptContent: string): string {
-  const lines = scriptContent.split('\n');
-  const exports: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.startsWith('const ') || trimmed.startsWith('let ') || trimmed.startsWith('var ') || trimmed.startsWith('function ')) {
-      const match = trimmed.match(/^(?:const|let|var|function)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)/);
-      if (match) {
-        exports.push(match[1]);
-      }
-    }
-  }
-
-  return exports.join(', ');
 }
 
 
