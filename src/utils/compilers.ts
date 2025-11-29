@@ -72,14 +72,38 @@ document.head.appendChild(style${index});`;
       }).join('\n');
     }
 
-    const finalCode = `
+    let finalCode = '';
+
+    if (scriptCode && scriptCode.includes('export default')) {
+      const scriptWithoutExport = scriptCode.replace('export default', 'const __sfc__');
+      finalCode = `
+${scriptWithoutExport}
+${templateCode}
+${stylesCode}
+
+__sfc__.render = render;
+export default __sfc__;
+`;
+    } else if (scriptCode) {
+      finalCode = `
 ${scriptCode}
 ${templateCode}
 ${stylesCode}
 
-__default__.render = render;
-export default __default__;
+export default {
+  render
+};
 `;
+    } else {
+      finalCode = `
+${templateCode}
+${stylesCode}
+
+export default {
+  render
+};
+`;
+    }
 
     return finalCode;
   } catch (error: any) {
