@@ -96,7 +96,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
+      const transformedCode = code.replace(/from\s+(['"])\.\/([^'"]*)['"]/g, "from $1$2$1");
       const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
 
       dataUrls[name] = dataUrl;
