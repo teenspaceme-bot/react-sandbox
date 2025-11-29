@@ -96,8 +96,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     const dataUrls: Record<string, string> = {};
 
     Object.entries(compiledFiles).forEach(([name, code]) => {
-      const transformedCode = code.replace(/from\s+['"]\.\//g, "from '");
-      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(transformedCode)}`;
+      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
 
       dataUrls[name] = dataUrl;
 
@@ -109,6 +108,63 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
         dataUrls[nameWithoutSrc] = dataUrl;
         const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
         dataUrls[nameWithoutSrcExt] = dataUrl;
+      }
+    });
+
+    const transformedFiles: Record<string, string> = {};
+    Object.entries(compiledFiles).forEach(([fileName, code]) => {
+      let transformedCode = code;
+
+      const importRegex = /from\s+['"](\.[^'"]+)['"]/g;
+      transformedCode = transformedCode.replace(importRegex, (match, importPath) => {
+        const currentDir = fileName.split('/').slice(0, -1).join('/');
+        let resolvedPath = importPath;
+
+        if (importPath.startsWith('./')) {
+          resolvedPath = currentDir ? `${currentDir}/${importPath.slice(2)}` : importPath.slice(2);
+        } else if (importPath.startsWith('../')) {
+          const parts = currentDir.split('/');
+          const upCount = (importPath.match(/\.\.\//g) || []).length;
+          const remainingPath = importPath.replace(/\.\.\//g, '');
+          const newDir = parts.slice(0, -upCount).join('/');
+          resolvedPath = newDir ? `${newDir}/${remainingPath}` : remainingPath;
+        }
+
+        const possiblePaths = [
+          resolvedPath,
+          `${resolvedPath}.jsx`,
+          `${resolvedPath}.tsx`,
+          `${resolvedPath}.js`,
+          `${resolvedPath}.ts`,
+          `${resolvedPath}.vue`
+        ];
+
+        for (const path of possiblePaths) {
+          if (dataUrls[path]) {
+            return `from '${path}'`;
+          }
+        }
+
+        return match;
+      });
+
+      transformedFiles[fileName] = transformedCode;
+    });
+
+    const finalDataUrls: Record<string, string> = {};
+    Object.entries(transformedFiles).forEach(([name, code]) => {
+      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
+
+      finalDataUrls[name] = dataUrl;
+
+      const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
+      finalDataUrls[nameWithoutExt] = dataUrl;
+
+      if (name.startsWith('src/')) {
+        const nameWithoutSrc = name.replace(/^src\//, '');
+        finalDataUrls[nameWithoutSrc] = dataUrl;
+        const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
+        finalDataUrls[nameWithoutSrcExt] = dataUrl;
       }
     });
 
@@ -132,7 +188,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     const customImportMap = {
       imports: {
         ...existingImports,
-        ...dataUrls
+        ...finalDataUrls
       }
     };
 
@@ -152,7 +208,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
       /<script\s+type="module"\s+src="([^"]+)"><\/script>/g,
       (match, src) => {
         const cleanSrc = src.replace(/^\.\//, '');
-        const dataUrl = dataUrls[cleanSrc];
+        const dataUrl = finalDataUrls[cleanSrc];
         if (dataUrl) {
           return `<script type="module" src="${dataUrl}"></script>`;
         }
