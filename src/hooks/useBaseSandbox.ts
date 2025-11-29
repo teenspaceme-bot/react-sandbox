@@ -1,8 +1,7 @@
-import { createSignal, createEffect, onMount } from 'solid-js';
+import { createSignal, createEffect } from 'solid-js';
 import type { FileType, ImportMapType } from '../types/sandbox';
 import type { Compiler } from '../compilers/types';
 import { FETCH_INTERCEPTOR } from '../utils/templates';
-import { ensureServiceWorkerReady, updateServiceWorkerFiles } from '../utils/sw-manager';
 
 export interface BaseSandboxConfig {
   initialFiles: FileType[];
@@ -20,13 +19,6 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
   const [isLoading, setIsLoading] = createSignal(false);
   const [blobUrls, setBlobUrls] = createSignal<string[]>([]);
-
-  // Initialize Service Worker on mount
-  onMount(() => {
-    ensureServiceWorkerReady().catch(err => {
-      console.error('[Sandbox] Failed to initialize Service Worker:', err);
-    });
-  });
 
   createEffect(() => {
     setFiles(config.initialFiles);
@@ -106,8 +98,30 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     blobUrls().forEach(url => URL.revokeObjectURL(url));
     setBlobUrls([]);
 
-    // Send compiled files to Service Worker
-    updateServiceWorkerFiles(compiledFiles);
+    const newBlobUrls: string[] = [];
+    const moduleUrls: Record<string, string> = {};
+
+    // Create blob URLs for all compiled modules
+    Object.entries(compiledFiles).forEach(([name, code]) => {
+      if (!name.endsWith('.html')) {
+        const blob = new Blob([code], { type: 'application/javascript' });
+        const blobUrl = URL.createObjectURL(blob);
+        newBlobUrls.push(blobUrl);
+
+        // Map with src/ prefix
+        moduleUrls[name] = blobUrl;
+
+        // Map with ./ prefix (src/App.jsx -> ./App.jsx)
+        const relativePath = './' + name.replace(/^src\//, '');
+        moduleUrls[relativePath] = blobUrl;
+
+        // Map without extension
+        const withoutExt = relativePath.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
+        moduleUrls[withoutExt] = blobUrl;
+      }
+    });
+
+    setBlobUrls(newBlobUrls);
 
     const htmlFile = files().find(f => f.name === 'index.html');
     let html = htmlFile?.content || '';
@@ -125,21 +139,6 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     } else {
       existingImports = importMap.imports;
     }
-
-    // Generate import map with Service Worker URLs
-    const moduleUrls: Record<string, string> = {};
-    const swBaseUrl = `${window.location.origin}/__sandbox_module__/`;
-
-    Object.entries(compiledFiles).forEach(([name]) => {
-      if (!name.endsWith('.html')) {
-        const modulePath = name.replace(/^src\//, './');
-        moduleUrls[modulePath] = `${swBaseUrl}${encodeURIComponent(modulePath)}`;
-
-        // Also map without extension
-        const withoutExt = modulePath.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-        moduleUrls[withoutExt] = `${swBaseUrl}${encodeURIComponent(modulePath)}`;
-      }
-    });
 
     const customImportMap = {
       imports: {
@@ -160,11 +159,16 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
       );
     }
 
+    // Replace script src with blob URLs
     html = html.replace(
       /<script\s+type="module"\s+src="([^"]+)"><\/script>/g,
       (_match, src) => {
-        const modulePath = src.replace(/^\.\//, './');
-        return `<script type="module" src="${swBaseUrl}${encodeURIComponent(modulePath)}"></script>`;
+        const relativePath = './' + src.replace(/^\.\//, '');
+        const blobUrl = moduleUrls[relativePath];
+        if (blobUrl) {
+          return `<script type="module" src="${blobUrl}"></script>`;
+        }
+        return `<script type="module" src="${src}"></script>`;
       }
     );
 
@@ -183,12 +187,7 @@ ${FETCH_INTERCEPTOR}
   const runCode = async () => {
     setIsLoading(true);
 
-    // Ensure Service Worker is ready first
-    await ensureServiceWorkerReady();
-
     let html: string;
-    let compiledFiles: Record<string, string> = {};
-
     if (config.compiler.compileAll) {
       try {
         setError('');
@@ -204,40 +203,26 @@ ${FETCH_INTERCEPTOR}
         setIsLoading(false);
         return;
       }
-      compiledFiles = compiled;
       html = generateHTML(compiled, importMap());
     }
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
 
     setIframeKey(prev => prev + 1);
 
     setTimeout(() => {
       const iframe = document.getElementById('preview-iframe') as HTMLIFrameElement;
       if (iframe) {
-        // Use sandbox-frame.html instead of blob URL
-        iframe.src = '/sandbox-frame.html';
-
+        const oldSrc = iframe.src;
+        if (oldSrc && oldSrc.startsWith('blob:')) {
+          URL.revokeObjectURL(oldSrc);
+        }
+        iframe.src = url;
         iframe.onload = () => {
-          // Send code to iframe via postMessage
-          iframe.contentWindow?.postMessage({
-            type: 'RUN_CODE',
-            html: html,
-            files: compiledFiles
-          }, '*');
+          setIsLoading(false);
         };
       }
-
-      // Listen for messages from iframe
-      const handleMessage = (event: MessageEvent) => {
-        if (event.data.type === 'CODE_EXECUTED') {
-          setIsLoading(false);
-        } else if (event.data.type === 'SW_READY') {
-          console.log('[Sandbox] iframe Service Worker ready');
-        } else if (event.data.type === 'SW_ERROR') {
-          console.error('[Sandbox] iframe Service Worker error:', event.data.error);
-        }
-      };
-
-      window.addEventListener('message', handleMessage);
     }, 0);
   };
 
