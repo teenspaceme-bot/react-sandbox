@@ -161,13 +161,17 @@ export function BaseSandbox(props: BaseSandboxProps) {
           </button>
         </div>
         <div class="header-right">
-          <Show when={props.viewMode() === 'code'}>
-            <span class="current-file">📄 {props.activeFile().name}</span>
-          </Show>
-          <Show when={props.viewMode() === 'preview'}>
-            <button onClick={props.runCode} class="refresh-button" title="Refresh preview">↻</button>
-          </Show>
-          {props.frameworkButtons}
+          <div style={{ display: 'flex', 'align-items': 'center', gap: '12px' }}>
+            <Show when={props.viewMode() === 'code'}>
+              <span class="current-file">📄 {props.activeFile().name}</span>
+            </Show>
+            <Show when={props.viewMode() === 'preview'}>
+              <button onClick={props.runCode} class="refresh-button" title="Refresh preview">↻</button>
+            </Show>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {props.frameworkButtons}
+          </div>
         </div>
       </div>
 
