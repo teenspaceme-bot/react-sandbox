@@ -2,17 +2,12 @@ import type { Compiler } from './types';
 import type { FileType } from '../types/sandbox';
 
 let babelInstance: typeof import('@babel/standalone') | null = null;
-let pluginRegistered = false;
+let jsxPlugin: any = null;
 
 async function loadBabel() {
   if (!babelInstance) {
     babelInstance = await import('@babel/standalone');
-
-    if (!pluginRegistered) {
-      const jsxPlugin = await import('babel-plugin-jsx-dom-expressions');
-      babelInstance.registerPlugin('jsx-dom-expressions', jsxPlugin.default || jsxPlugin);
-      pluginRegistered = true;
-    }
+    jsxPlugin = await import('babel-plugin-jsx-dom-expressions');
   }
   return babelInstance;
 }
@@ -25,7 +20,7 @@ export const solidCompiler: Compiler = {
       const babel = await loadBabel();
       const result = babel.transform(file.content, {
         plugins: [
-          ['jsx-dom-expressions', {
+          [jsxPlugin.default || jsxPlugin, {
             moduleName: 'solid-js/web',
             generate: 'dom',
             hydratable: false,
