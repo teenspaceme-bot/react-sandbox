@@ -426,8 +426,8 @@ export const solidTemplate: ProjectTemplate = {
   <script type="importmap">
     {
       "imports": {
-        "solid-js": "https://cdn.jsdelivr.net/npm/solid-js@1.8.22/dist/solid.js",
-        "solid-js/web": "https://cdn.jsdelivr.net/npm/solid-js@1.8.22/web/dist/web.js",
+        "solid-js": "https://esm.sh/solid-js@1.8.22/dist/solid.js",
+        "solid-js/web": "https://esm.sh/solid-js@1.8.22/web/dist/web.js",
         "solid-element": "https://esm.sh/solid-element@1.8.1"
       }
     }
