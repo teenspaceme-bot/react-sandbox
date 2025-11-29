@@ -283,6 +283,19 @@ export const nativeTemplate: ProjectTemplate = {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Native JS Sandbox</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "lodash-es": "https://esm.sh/lodash-es@4.17.21"
+      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+  </style>
 </head>
 <body>
   <div id="app">
@@ -300,6 +313,7 @@ export const nativeTemplate: ProjectTemplate = {
       <pre id="array-display">[1, 2, 3, 4, 5]</pre>
     </div>
   </div>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>`,
       language: 'html'
@@ -335,8 +349,6 @@ console.log('Native JS app initialized!');`,
     {
       name: 'src/styles.css',
       content: `body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
   padding: 20px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
