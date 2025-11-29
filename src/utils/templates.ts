@@ -1,5 +1,25 @@
 import type { ProjectTemplate } from '../types/sandbox';
 
+export const API_HELPER = `
+// API Helper for cross-origin requests with cookie support
+const API_BASE = window.location.origin;
+
+export async function fetchAPI(endpoint, options = {}) {
+  const url = endpoint.startsWith('http')
+    ? \`\${API_BASE}/api/proxy?url=\${encodeURIComponent(endpoint)}\`
+    : \`\${API_BASE}\${endpoint}\`;
+
+  return fetch(url, {
+    ...options,
+    credentials: 'include', // Auto send cookies
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers
+    }
+  });
+}
+`;
+
 export const reactTemplate: ProjectTemplate = {
   framework: 'react',
   files: [
@@ -129,6 +149,11 @@ export function Card({ title, children }) {
   );
 }`,
       language: 'jsx'
+    },
+    {
+      name: 'src/utils/api.js',
+      content: API_HELPER,
+      language: 'javascript'
     }
   ],
   importMap: {
