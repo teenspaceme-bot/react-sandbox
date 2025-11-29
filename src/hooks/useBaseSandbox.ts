@@ -93,21 +93,18 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   };
 
   const generateHTML = (compiledFiles: Record<string, string>, importMap: ImportMapType): string => {
-    const dataUrls: Record<string, string> = {};
-
-    Object.entries(compiledFiles).forEach(([name, code]) => {
-      const dataUrl = `data:text/javascript;charset=utf-8,${encodeURIComponent(code)}`;
-
-      dataUrls[name] = dataUrl;
+    const filePathMap: Record<string, string> = {};
+    Object.keys(compiledFiles).forEach(name => {
+      filePathMap[name] = name;
 
       const nameWithoutExt = name.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-      dataUrls[nameWithoutExt] = dataUrl;
+      filePathMap[nameWithoutExt] = name;
 
       if (name.startsWith('src/')) {
         const nameWithoutSrc = name.replace(/^src\//, '');
-        dataUrls[nameWithoutSrc] = dataUrl;
+        filePathMap[nameWithoutSrc] = name;
         const nameWithoutSrcExt = nameWithoutSrc.replace(/\.(jsx|tsx|js|ts|vue)$/, '');
-        dataUrls[nameWithoutSrcExt] = dataUrl;
+        filePathMap[nameWithoutSrcExt] = name;
       }
     });
 
@@ -140,8 +137,8 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
         ];
 
         for (const path of possiblePaths) {
-          if (dataUrls[path]) {
-            return `from '${path}'`;
+          if (filePathMap[path]) {
+            return `from '${filePathMap[path]}'`;
           }
         }
 
