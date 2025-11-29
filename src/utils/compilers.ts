@@ -39,6 +39,8 @@ export function compileVueFile(file: FileType): string {
       const template = descriptor.template?.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$') || '';
 
       let scriptContent = compiled.content
+        .replace(/setup\(__props, \{ expose: __expose \}\)/, 'setup()')
+        .replace(/__expose\(\);?\s*\n/, '')
         .replace(/const __returned__ = \{([^}]+)\}/, 'return { $1 }')
         .replace(/Object\.defineProperty\(__returned__[^\n]+\n/, '')
         .replace(/return __returned__/, '');
