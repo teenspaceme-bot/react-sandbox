@@ -445,7 +445,10 @@ export function ReactSandbox() {
           </button>
           <button
             class={`view-toggle-button ${viewMode() === 'preview' ? 'active' : ''}`}
-            onClick={() => setViewMode('preview')}
+            onClick={() => {
+              setViewMode('preview');
+              runCode();
+            }}
           >
             Preview
           </button>
@@ -455,7 +458,7 @@ export function ReactSandbox() {
             <span class="current-file">📄 {activeFile().name}</span>
           </Show>
           <Show when={viewMode() === 'preview'}>
-            <button onClick={runCode} class="run-button">▶ Run</button>
+            <button onClick={runCode} class="run-button" title="Refresh preview">↻</button>
           </Show>
         </div>
       </div>
