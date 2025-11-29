@@ -28,6 +28,8 @@ interface BaseSandboxProps {
   error: () => string;
   iframeKey: () => number;
   expandedFolders: () => Set<string>;
+  viewMode: () => 'code' | 'preview';
+  setViewMode: (mode: 'code' | 'preview') => void;
   isLoading: () => boolean;
   activeFile: () => FileType;
   updateFileContent: (content: string) => void;
@@ -37,6 +39,7 @@ interface BaseSandboxProps {
   runCode: () => void;
   frameworkName: string;
   addFilePrompt: string;
+  frameworkButtons?: any;
 }
 
 export function BaseSandbox(props: BaseSandboxProps) {
@@ -141,55 +144,80 @@ export function BaseSandbox(props: BaseSandboxProps) {
     <div class="sandbox-container">
       <div class="sandbox-header">
         <div class="header-left">
-          <span class="framework-badge">{props.frameworkName}</span>
+          <button
+            class={`view-toggle-button ${props.viewMode() === 'code' ? 'active' : ''}`}
+            onClick={() => props.setViewMode('code')}
+          >
+            Code
+          </button>
+          <button
+            class={`view-toggle-button ${props.viewMode() === 'preview' ? 'active' : ''}`}
+            onClick={() => {
+              props.setViewMode('preview');
+              props.runCode();
+            }}
+          >
+            Preview
+          </button>
         </div>
         <div class="header-right">
-          <span class="current-file">📄 {props.activeFile().name}</span>
-          <button onClick={props.runCode} class="refresh-button" title="Refresh preview">↻</button>
+          <Show when={props.viewMode() === 'code'}>
+            <span class="current-file">📄 {props.activeFile().name}</span>
+          </Show>
+          <Show when={props.viewMode() === 'preview'}>
+            <button onClick={props.runCode} class="refresh-button" title="Refresh preview">↻</button>
+          </Show>
+          {props.frameworkButtons}
         </div>
       </div>
 
       <div class="sandbox-content">
-        <div class="file-explorer">
-          <div class="file-tree">
-            <For each={buildFileTree()}>
-              {(node) => renderTreeNode(node, 0)}
-            </For>
+        <Show when={props.viewMode() === 'code'}>
+          <div class="file-explorer">
+            <div class="file-tree">
+              <For each={buildFileTree()}>
+                {(node) => renderTreeNode(node, 0)}
+              </For>
+            </div>
+            <button class="add-file-button" onClick={() => props.addFile(props.addFilePrompt)}>
+              <span class="add-icon">+</span> New File
+            </button>
           </div>
-          <button class="add-file-button" onClick={() => props.addFile(props.addFilePrompt)}>
-            <span class="add-icon">+</span> New File
-          </button>
-        </div>
+        </Show>
 
-        <div class="editor-panel">
-          <textarea
-            class="code-editor"
-            value={props.activeFile().content}
-            onInput={(e) => props.updateFileContent(e.currentTarget.value)}
-            spellcheck={false}
-          />
+        <Show when={props.viewMode() === 'code'}>
+          <div class="editor-panel">
+            <textarea
+              class="code-editor"
+              value={props.activeFile().content}
+              onInput={(e) => props.updateFileContent(e.currentTarget.value)}
+              spellcheck={false}
+            />
 
-          <Show when={props.error()}>
-            <div class="error-message">
-              <strong>Error:</strong> {props.error()}
-            </div>
-          </Show>
-        </div>
+            <Show when={props.error()}>
+              <div class="error-message">
+                <strong>Error:</strong> {props.error()}
+              </div>
+            </Show>
+          </div>
+        </Show>
 
-        <div class="preview-panel">
-          <Show when={props.isLoading()}>
-            <div class="loading-overlay">
-              <div class="loading-spinner"></div>
-              <div class="loading-text">加载中...</div>
-            </div>
-          </Show>
-          <iframe
-            id="preview-iframe"
-            data-key={props.iframeKey()}
-            class="preview-iframe"
-            sandbox="allow-scripts allow-modals"
-          />
-        </div>
+        <Show when={props.viewMode() === 'preview'}>
+          <div class="preview-panel preview-fullscreen">
+            <Show when={props.isLoading()}>
+              <div class="loading-overlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">加载中...</div>
+              </div>
+            </Show>
+            <iframe
+              id="preview-iframe"
+              data-key={props.iframeKey()}
+              class="preview-iframe"
+              sandbox="allow-scripts allow-modals"
+            />
+          </div>
+        </Show>
       </div>
 
       <div class="import-map-section">

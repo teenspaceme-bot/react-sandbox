@@ -12,45 +12,24 @@ function App() {
     }
   };
 
-  return (
-    <div>
-      <div style={{
-        padding: '10px',
-        background: '#f5f5f5',
-        'border-bottom': '1px solid #ddd',
-        display: 'flex',
-        gap: '10px'
-      }}>
-        <button
-          onClick={() => switchFramework('react')}
-          style={{
-            padding: '8px 16px',
-            'background-color': framework() === 'react' ? '#007bff' : '#fff',
-            color: framework() === 'react' ? '#fff' : '#333',
-            border: '1px solid #ddd',
-            'border-radius': '4px',
-            cursor: 'pointer'
-          }}
-        >
-          React
-        </button>
-        <button
-          onClick={() => switchFramework('vue')}
-          style={{
-            padding: '8px 16px',
-            'background-color': framework() === 'vue' ? '#42b883' : '#fff',
-            color: framework() === 'vue' ? '#fff' : '#333',
-            border: '1px solid #ddd',
-            'border-radius': '4px',
-            cursor: 'pointer'
-          }}
-        >
-          Vue
-        </button>
-      </div>
-      {framework() === 'react' ? <ReactSandbox /> : <VueSandbox />}
-    </div>
-  )
+  const frameworkButtons = (
+    <>
+      <button
+        class={`view-toggle-button ${framework() === 'react' ? 'active' : ''}`}
+        onClick={() => switchFramework('react')}
+      >
+        React
+      </button>
+      <button
+        class={`view-toggle-button ${framework() === 'vue' ? 'active' : ''}`}
+        onClick={() => switchFramework('vue')}
+      >
+        Vue
+      </button>
+    </>
+  );
+
+  return framework() === 'react' ? <ReactSandbox frameworkButtons={frameworkButtons} /> : <VueSandbox frameworkButtons={frameworkButtons} />
 }
 
 export default App

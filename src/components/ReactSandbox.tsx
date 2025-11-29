@@ -3,7 +3,11 @@ import { reactCompiler } from '../compilers/react.compiler';
 import { reactTemplate } from '../utils/templates';
 import { BaseSandbox } from './BaseSandbox';
 
-export function ReactSandbox() {
+interface ReactSandboxProps {
+  frameworkButtons?: any;
+}
+
+export function ReactSandbox(props: ReactSandboxProps) {
   const sandbox = useBaseSandbox({
     initialFiles: reactTemplate.files,
     initialImportMap: reactTemplate.importMap,
@@ -20,6 +24,8 @@ export function ReactSandbox() {
       error={sandbox.error}
       iframeKey={sandbox.iframeKey}
       expandedFolders={sandbox.expandedFolders}
+      viewMode={sandbox.viewMode}
+      setViewMode={sandbox.setViewMode}
       isLoading={sandbox.isLoading}
       activeFile={sandbox.activeFile}
       updateFileContent={sandbox.updateFileContent}
@@ -29,6 +35,7 @@ export function ReactSandbox() {
       runCode={sandbox.runCode}
       frameworkName="React"
       addFilePrompt="Enter file name (e.g., Component.jsx):"
+      frameworkButtons={props.frameworkButtons}
     />
   );
 }

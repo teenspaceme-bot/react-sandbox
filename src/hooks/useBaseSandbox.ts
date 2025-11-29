@@ -15,6 +15,7 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
   const [error, setError] = createSignal<string>('');
   const [iframeKey, setIframeKey] = createSignal(0);
   const [expandedFolders, setExpandedFolders] = createSignal<Set<string>>(new Set(['root', 'src', 'src/components']));
+  const [viewMode, setViewMode] = createSignal<'code' | 'preview'>('code');
   const [isLoading, setIsLoading] = createSignal(false);
 
   const activeFile = () => files()[activeFileIndex()];
@@ -197,6 +198,8 @@ export function useBaseSandbox(config: BaseSandboxConfig) {
     error,
     iframeKey,
     expandedFolders,
+    viewMode,
+    setViewMode,
     isLoading,
     activeFile,
     updateFileContent,
