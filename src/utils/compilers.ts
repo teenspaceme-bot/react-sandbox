@@ -1,5 +1,4 @@
 import { transform } from '@babel/standalone';
-import * as VueCompiler from '@vue/compiler-sfc';
 import type { FileType } from '../types/sandbox';
 
 export function compileReactFile(file: FileType): string {
@@ -21,92 +20,35 @@ export function compileVueFile(file: FileType): string {
     return file.content;
   }
 
-  try {
-    const id = file.name.replace(/[^a-zA-Z0-9]/g, '_');
+  const templateMatch = file.content.match(/<template>([\s\S]*?)<\/template>/);
+  const scriptMatch = file.content.match(/<script(?:\s+setup)?>([\s\S]*?)<\/script>/);
+  const styleMatch = file.content.match(/<style(?:\s+scoped)?>([\s\S]*?)<\/style>/);
 
-    const { descriptor, errors } = VueCompiler.parse(file.content, {
-      filename: file.name,
-      sourceMap: false
-    });
+  const template = templateMatch ? templateMatch[1].trim() : '';
+  const script = scriptMatch ? scriptMatch[1].trim() : '';
+  const style = styleMatch ? styleMatch[1].trim() : '';
 
-    if (errors.length > 0) {
-      throw new Error(`Parse errors: ${errors.map(e => e.message).join(', ')}`);
-    }
+  let code = '';
 
-    let scriptCode = '';
-    if (descriptor.script || descriptor.scriptSetup) {
-      const compiled = VueCompiler.compileScript(descriptor, {
-        id,
-        inlineTemplate: false
-      });
-      scriptCode = compiled.content;
-    }
-
-    let templateCode = '';
-    if (descriptor.template) {
-      const compiled = VueCompiler.compileTemplate({
-        source: descriptor.template.content,
-        filename: file.name,
-        id,
-        scoped: descriptor.styles.some(s => s.scoped),
-        compilerOptions: {
-          mode: 'module'
-        }
-      });
-
-      if (compiled.errors.length > 0) {
-        throw new Error(`Template errors: ${compiled.errors.map(e => typeof e === 'string' ? e : e.message).join(', ')}`);
-      }
-
-      templateCode = compiled.code;
-    }
-
-    let stylesCode = '';
-    if (descriptor.styles.length > 0) {
-      stylesCode = descriptor.styles.map((style, index) => {
-        const css = style.content;
-        return `
-const style${index} = document.createElement('style');
-style${index}.textContent = \`${css.replace(/`/g, '\\`')}\`;
-document.head.appendChild(style${index});`;
-      }).join('\n');
-    }
-
-    let finalCode = '';
-
-    if (scriptCode && scriptCode.includes('export default')) {
-      const scriptWithoutExport = scriptCode.replace('export default', 'const __sfc__');
-      finalCode = `
-${scriptWithoutExport}
-${templateCode}
-${stylesCode}
-
-__sfc__.render = render;
-export default __sfc__;
+  if (style) {
+    code += `
+const style = document.createElement('style');
+style.textContent = \`${style.replace(/`/g, '\\`')}\`;
+document.head.appendChild(style);
 `;
-    } else if (scriptCode) {
-      finalCode = `
-${scriptCode}
-${templateCode}
-${stylesCode}
-
-export default {
-  render
-};
-`;
-    } else {
-      finalCode = `
-${templateCode}
-${stylesCode}
-
-export default {
-  render
-};
-`;
-    }
-
-    return finalCode;
-  } catch (error: any) {
-    throw new Error(`Vue compilation failed for ${file.name}: ${error.message}`);
   }
+
+  if (script) {
+    code += `
+${script}
+`;
+  }
+
+  code += `
+export default {
+  template: \`${template.replace(/`/g, '\\`')}\`
+};
+`;
+
+  return code;
 }
