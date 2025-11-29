@@ -468,53 +468,44 @@ root.innerHTML = \`
     {
       name: 'src/components/CounterCard.jsx',
       content: `import { createSignal } from 'solid-js';
+import { render } from 'solid-js/web';
 import { customElement } from 'solid-element';
 
 function CounterCard() {
   const [count, setCount] = createSignal(0);
 
+  const cardStyle = {
+    border: '1px solid #ddd',
+    borderRadius: '8px',
+    padding: '20px',
+    marginBottom: '20px',
+    backgroundColor: '#f9f9f9',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    maxWidth: '500px',
+    margin: '0 auto 20px'
+  };
+
+  const buttonStyle = {
+    padding: '10px 20px',
+    fontSize: '16px',
+    backgroundColor: '#2c4f7c',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    marginRight: '10px'
+  };
+
   return (
-    <div style={{
-      border: '1px solid #ddd',
-      borderRadius: '8px',
-      padding: '20px',
-      marginBottom: '20px',
-      backgroundColor: '#f9f9f9',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      maxWidth: '500px',
-      margin: '0 auto 20px'
-    }}>
-      <h2 style={{ marginTop: 0, color: '#333' }}>Counter Example</h2>
-      <p style={{ fontSize: '18px', margin: '15px 0' }}>
+    <div style={cardStyle}>
+      <h2 style="margin-top: 0; color: #333">Counter Example</h2>
+      <p style="font-size: 18px; margin: 15px 0">
         Count: <strong>{count()}</strong>
       </p>
-      <button
-        onClick={() => setCount(count() + 1)}
-        style={{
-          padding: '10px 20px',
-          fontSize: '16px',
-          backgroundColor: '#2c4f7c',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          marginRight: '10px'
-        }}
-      >
+      <button onClick={() => setCount(count() + 1)} style={buttonStyle}>
         Increment
       </button>
-      <button
-        onClick={() => setCount(count() - 1)}
-        style={{
-          padding: '10px 20px',
-          fontSize: '16px',
-          backgroundColor: '#2c4f7c',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer'
-        }}
-      >
+      <button onClick={() => setCount(count() - 1)} style={buttonStyle}>
         Decrement
       </button>
     </div>

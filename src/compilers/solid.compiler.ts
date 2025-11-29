@@ -2,16 +2,16 @@ import type { Compiler } from './types';
 import type { FileType } from '../types/sandbox';
 
 let babelInstance: typeof import('@babel/standalone') | null = null;
-let presetRegistered = false;
+let pluginRegistered = false;
 
 async function loadBabel() {
   if (!babelInstance) {
     babelInstance = await import('@babel/standalone');
 
-    if (!presetRegistered) {
-      const presetSolid = await import('babel-preset-solid');
-      babelInstance.registerPreset('solid', presetSolid.default || presetSolid);
-      presetRegistered = true;
+    if (!pluginRegistered) {
+      const jsxPlugin = await import('babel-plugin-jsx-dom-expressions');
+      babelInstance.registerPlugin('jsx-dom-expressions', jsxPlugin.default || jsxPlugin);
+      pluginRegistered = true;
     }
   }
   return babelInstance;
@@ -24,15 +24,16 @@ export const solidCompiler: Compiler = {
     if (isJSXOrTSX) {
       const babel = await loadBabel();
       const result = babel.transform(file.content, {
-        presets: [
-          ['solid', {
+        plugins: [
+          ['jsx-dom-expressions', {
             moduleName: 'solid-js/web',
             generate: 'dom',
             hydratable: false,
-            delegateEvents: true
-          }]
-        ],
-        plugins: [
+            delegateEvents: true,
+            builtIns: ['For', 'Show', 'Switch', 'Match', 'Suspense', 'SuspenseList', 'Portal', 'Index', 'Dynamic', 'ErrorBoundary'],
+            contextToCustomElements: true,
+            wrapConditionals: true
+          }],
           function() {
             return {
               visitor: {
