@@ -77,16 +77,14 @@ export function compileVueFile(file: FileType): string {
       let scriptContent = compiled.content;
 
       if (descriptor.scriptSetup) {
-        scriptContent = scriptContent
-          .replace(/export default/, 'const __sfc__ =')
-          .replace(/defineComponent/, '_defineComponent');
+        scriptContent = VueCompiler.rewriteDefault(scriptContent, '__sfc__');
+        scriptContent = scriptContent.replace(/defineComponent/, '_defineComponent');
 
         if (!scriptContent.includes('import')) {
           code += `import { defineComponent as _defineComponent } from 'vue';\n`;
         }
       } else {
-        scriptContent = scriptContent
-          .replace(/export default/, 'const __sfc__ =');
+        scriptContent = VueCompiler.rewriteDefault(scriptContent, '__sfc__');
       }
 
       code += scriptContent;
