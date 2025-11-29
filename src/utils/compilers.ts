@@ -32,6 +32,7 @@ export function compileVueFile(file: FileType): string {
 
     const scriptContent = descriptor.script?.content || descriptor.scriptSetup?.content || '';
     const isSetup = !!descriptor.scriptSetup;
+    const hasScript = !!descriptor.script || !!descriptor.scriptSetup;
 
     let templateCode = '';
     if (descriptor.template) {
@@ -75,7 +76,19 @@ document.head.appendChild(style${index});`;
 
     let compiledCode = '';
 
-    if (isSetup) {
+    if (!hasScript) {
+      const renderFunctionMatch = templateCode.match(/export function render\(_ctx[^)]*\) \{[\s\S]*\}/);
+      const renderFunction = renderFunctionMatch ? renderFunctionMatch[0].replace('export ', '') : '';
+
+      compiledCode = `
+${renderFunction}
+
+${stylesCode}
+
+export default {
+  render
+};`;
+    } else if (isSetup) {
       const renderFunctionMatch = templateCode.match(/export function render\(_ctx[^)]*\) \{[\s\S]*\}/);
       const renderFunction = renderFunctionMatch ? renderFunctionMatch[0].replace('export ', '') : '';
 
