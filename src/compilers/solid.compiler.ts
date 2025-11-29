@@ -27,7 +27,9 @@ export const solidCompiler: Compiler = {
         presets: [
           ['solid', {
             moduleName: 'solid-js/web',
-            generate: 'dom'
+            generate: 'dom',
+            hydratable: false,
+            delegateEvents: true
           }]
         ],
         plugins: [
