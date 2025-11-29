@@ -436,7 +436,7 @@ export function ReactSandbox() {
   return (
     <div class="sandbox-container">
       <div class="sandbox-header">
-        <div class="header-controls">
+        <div class="header-left">
           <button
             class={`view-toggle-button ${viewMode() === 'code' ? 'active' : ''}`}
             onClick={() => setViewMode('code')}
@@ -449,11 +449,15 @@ export function ReactSandbox() {
           >
             Preview
           </button>
+        </div>
+        <div class="header-right">
           <Show when={viewMode() === 'code'}>
             <span class="current-file">📄 {activeFile().name}</span>
           </Show>
+          <Show when={viewMode() === 'preview'}>
+            <button onClick={runCode} class="run-button">▶ Run</button>
+          </Show>
         </div>
-        <button onClick={runCode} class="run-button">▶ Run</button>
       </div>
 
       <div class="sandbox-content">

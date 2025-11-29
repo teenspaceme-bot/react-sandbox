@@ -8,26 +8,35 @@
 
 .sandbox-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
   background: #2d2d2d;
   border-bottom: 1px solid #3c3c3c;
+  padding: 0;
 }
 
-.header-controls {
+.header-left {
+  width: 220px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
+  padding: 10px 16px;
+  border-right: 1px solid #3c3c3c;
+}
+
+.header-right {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
 }
 
 .run-button {
-  padding: 8px 20px;
+  padding: 6px 16px;
   background: #0e639c;
   color: white;
   border: none;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: background 0.2s;
