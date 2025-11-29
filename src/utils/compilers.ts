@@ -1,4 +1,5 @@
 import { transform } from '@babel/standalone';
+import * as VueCompiler from '@vue/compiler-sfc';
 import type { FileType } from '../types/sandbox';
 
 export function compileReactFile(file: FileType): string {
@@ -21,149 +22,66 @@ export function compileVueFile(file: FileType): string {
   }
 
   try {
-    const parts = parseVueSFC(file.content);
-    return generateVueCode(parts);
-  } catch (error) {
-    throw new Error(`Failed to compile ${file.name}: ${error}`);
-  }
-}
+    const { descriptor, errors } = VueCompiler.parse(file.content, {
+      filename: file.name
+    });
 
-interface VueSFCParts {
-  template: string;
-  script: string;
-  style: string;
-  isSetup: boolean;
-}
-
-function parseVueSFC(content: string): VueSFCParts {
-  const templateMatch = content.match(/<template>([\s\S]*?)<\/template>/);
-  const scriptMatch = content.match(/<script(?:\s+setup)?>([\s\S]*?)<\/script>/);
-  const styleMatch = content.match(/<style(?:\s+scoped)?>([\s\S]*?)<\/style>/);
-  const isSetup = /<script\s+setup>/.test(content);
-
-  return {
-    template: templateMatch ? templateMatch[1].trim() : '',
-    script: scriptMatch ? scriptMatch[1].trim() : '',
-    style: styleMatch ? styleMatch[1].trim() : '',
-    isSetup
-  };
-}
-
-function generateVueCode(parts: VueSFCParts): string {
-  let code = '';
-
-  if (parts.style) {
-    const escapedStyle = parts.style.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    code += `const style = document.createElement('style');\nstyle.textContent = \`${escapedStyle}\`;\ndocument.head.appendChild(style);\n\n`;
-  }
-
-  if (parts.isSetup) {
-    code += compileScriptSetup(parts.script, parts.template);
-  } else if (parts.script) {
-    const escapedTemplate = parts.template.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    code += `${parts.script}\n\nexport default {\n  ...(__default__ || {}),\n  template: \`${escapedTemplate}\`\n};\n`;
-  } else {
-    const escapedTemplate = parts.template.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-    code += `export default {\n  template: \`${escapedTemplate}\`\n};\n`;
-  }
-
-  return code;
-}
-
-function compileScriptSetup(script: string, template: string): string {
-  const lines = script.split('\n');
-  const imports: string[] = [];
-  const vueImports: string[] = [];
-  const componentNames: string[] = [];
-  const propsDefinitions: string[] = [];
-  const codeLines: string[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-
-    if (trimmed.startsWith('import')) {
-      if (/from\s+['"]vue['"]/.test(trimmed)) {
-        const match = trimmed.match(/import\s+\{([^}]+)\}/);
-        if (match) {
-          vueImports.push(...match[1].split(',').map(s => s.trim()));
-        }
-      } else if (/from\s+['"]\.\/.+['"]/.test(trimmed)) {
-        const match = trimmed.match(/import\s+(\w+)/);
-        if (match) {
-          componentNames.push(match[1]);
-        }
-        imports.push(trimmed);
-      }
-    } else if (trimmed.includes('defineProps')) {
-      propsDefinitions.push(trimmed);
-    } else if (trimmed) {
-      codeLines.push(line);
+    if (errors.length > 0) {
+      throw new Error(errors.map(e => e.message).join('\n'));
     }
-  }
 
-  const propsObject = extractPropsFromDefineProps(propsDefinitions.join('\n'));
-  const variables = extractVariableNames(codeLines.join('\n'));
-  const allReturns = [...componentNames, ...variables].join(', ');
+    let code = '';
 
-  const vueImportLine = vueImports.length > 0
-    ? `import { ${vueImports.join(', ')} } from 'vue';\n`
-    : '';
-
-  const componentImportLines = imports.length > 0
-    ? imports.join('\n') + '\n'
-    : '';
-
-  const escapedTemplate = template.replace(/`/g, '\\`').replace(/\$/g, '\\$');
-
-  let output = '';
-  if (vueImportLine || componentImportLines) {
-    output += vueImportLine + componentImportLines + '\n';
-  }
-
-  output += `export default {\n`;
-  if (propsObject) {
-    output += `  props: ${propsObject},\n`;
-  }
-  if (codeLines.length > 0 || componentNames.length > 0) {
-    output += `  setup(props) {\n`;
-    if (codeLines.length > 0) {
-      output += codeLines.map(line => '    ' + line).join('\n') + '\n';
+    if (descriptor.styles.length > 0) {
+      const style = descriptor.styles[0];
+      const escapedStyle = style.content.replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      code += `const style = document.createElement('style');\n`;
+      code += `style.textContent = \`${escapedStyle}\`;\n`;
+      code += `document.head.appendChild(style);\n\n`;
     }
-    output += `    return { ${allReturns} };\n`;
-    output += `  },\n`;
-  }
-  output += `  template: \`${escapedTemplate}\`\n`;
-  output += `};\n`;
 
-  return output;
-}
+    if (descriptor.scriptSetup) {
+      const compiled = VueCompiler.compileScript(descriptor, {
+        id: file.name,
+        inlineTemplate: false
+      });
 
-function extractPropsFromDefineProps(propsCode: string): string {
-  if (!propsCode) return '';
-
-  const match = propsCode.match(/defineProps\s*\(\s*(\{[\s\S]*?\})\s*\)/);
-  if (match) {
-    return match[1].trim();
-  }
-
-  return '';
-}
-
-function extractVariableNames(code: string): string[] {
-  const variables = new Set<string>();
-
-  const patterns = [
-    /(?:const|let|var)\s+(\w+)\s*=/g,
-    /function\s+(\w+)\s*\(/g,
-  ];
-
-  for (const pattern of patterns) {
-    let match;
-    while ((match = pattern.exec(code)) !== null) {
-      variables.add(match[1]);
+      code += transformCompiledScript(compiled.content, descriptor.template?.content || '');
+    } else if (descriptor.script) {
+      const escapedTemplate = (descriptor.template?.content || '').trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      code += `${descriptor.script.content}\n\n`;
+      code += `export default {\n`;
+      code += `  ...(__default__ || {}),\n`;
+      code += `  template: \`${escapedTemplate}\`\n`;
+      code += `};\n`;
+    } else if (descriptor.template) {
+      const escapedTemplate = descriptor.template.content.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
+      code += `export default {\n`;
+      code += `  template: \`${escapedTemplate}\`\n`;
+      code += `};\n`;
     }
+
+    return code;
+  } catch (error: any) {
+    throw new Error(`Failed to compile ${file.name}: ${error.message}`);
+  }
+}
+
+function transformCompiledScript(compiledScript: string, template: string): string {
+  const escapedTemplate = template.trim().replace(/`/g, '\\`').replace(/\$/g, '\\$');
+
+  const exportDefaultMatch = compiledScript.match(/export default ([^]*)/);
+  if (exportDefaultMatch) {
+    const defaultExport = exportDefaultMatch[1].trim();
+
+    if (defaultExport.startsWith('/*@__PURE__*/')) {
+      return `${compiledScript.replace(/export default [^]*/, '')}\n\nexport default {\n  ...${defaultExport.replace(/^\/\*@__PURE__\*\/\s*/, '')},\n  template: \`${escapedTemplate}\`\n};\n`;
+    }
+
+    return `${compiledScript.replace(/export default [^]*/, '')}\n\nexport default {\n  ...${defaultExport},\n  template: \`${escapedTemplate}\`\n};\n`;
   }
 
-  return Array.from(variables);
+  return `${compiledScript}\n\nexport default {\n  template: \`${escapedTemplate}\`\n};\n`;
 }
+
 
